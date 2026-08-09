@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Stick Cricket — Floodlight Smash</title>
+<style>
+/* ============================================================
+   STICK CRICKET — FLOODLIGHT SMASH  (batsman POV · 9:16)
+   Night-match stadium theme. Scoreboard-amber HUD, floodlit pitch.
+   ============================================================ */
+:root{
+  --night:#0b1526;        /* sky navy */
+  --night-2:#101d33;
+  --amber:#ffb424;        /* scoreboard amber */
+  --ink:#e8eef7;          /* light text */
+  --red:#e34040;          /* ball / wicket */
+  --panel:#0a0f1a;        /* scoreboard panel */
+  --line:#22314d;
+  --good:#57d977;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:radial-gradient(120% 90% at 50% 0%, var(--night-2) 0%, var(--night) 55%, #060b14 100%);
+  color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+}
+/* Condensed "stadium signage" display type, no webfonts so it works offline */
+.display{
+  font-family:Impact,"Arial Narrow Bold","Franklin Gothic Medium","Segoe UI",sans-serif;
+  letter-spacing:.06em;text-transform:uppercase;
+}
+.digits{font-family:"Courier New",ui-monospace,Menlo,monospace;font-weight:700;letter-spacing:.05em}
+
+/* ---------- stage: portrait 9:16 ---------- */
+#stage{
+  position:relative;
+  width:min(100vw, 56.25vh, 540px);   /* 9:16 that always fits the screen */
+  aspect-ratio:9/16;
+  box-shadow:0 30px 80px rgba(0,0,0,.6);
+  border-radius:10px;overflow:hidden;background:var(--night);
+}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+/* ---------- HUD (scoreboard panel) ---------- */
+#hud{
+  position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;
+  padding:6px;pointer-events:none;z-index:5;gap:6px;
+}
+.board{
+  background:linear-gradient(#0d1424,var(--panel));
+  border:1px solid var(--line);border-top:3px solid var(--amber);
+  border-radius:6px;padding:4px 8px;flex:1;min-width:0;
+  box-shadow:0 4px 14px rgba(0,0,0,.5), inset 0 0 24px rgba(255,180,36,.05);
+}
+.board .lbl{font-size:9px;color:#7d8db0;letter-spacing:.16em;text-transform:uppercase}
+.board .val{color:var(--amber);font-size:17px;line-height:1.15;text-shadow:0 0 12px rgba(255,180,36,.45);white-space:nowrap}
+.board .sub{font-size:10px;color:#aab7d4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#msg{
+  position:absolute;top:30%;left:50%;transform:translateX(-50%);
+  font-size:38px;color:var(--amber);text-shadow:0 0 20px rgba(255,180,36,.6),0 3px 0 #000;
+  opacity:0;pointer-events:none;z-index:6;white-space:nowrap;transition:opacity .15s;
+}
+#msg.show{opacity:1;animation:pop .45s ease}
+#msg.bad{color:var(--red);text-shadow:0 0 20px rgba(227,64,64,.6),0 3px 0 #000}
+#msg.good{color:var(--good);text-shadow:0 0 20px rgba(87,217,119,.55),0 3px 0 #000}
+@keyframes pop{0%{transform:translateX(-50%) scale(.6)}60%{transform:translateX(-50%) scale(1.12)}100%{transform:translateX(-50%) scale(1)}}
+#ticker{
+  position:absolute;left:50%;top:72px;transform:translateX(-50%);
+  background:rgba(10,15,26,.85);border:1px solid var(--line);border-radius:20px;
+  padding:4px 14px;font-size:12px;color:#c4d0e8;z-index:5;pointer-events:none;
+  max-width:92%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+#overballs{display:flex;gap:4px;margin-top:3px}
+.oball{width:12px;height:12px;border-radius:50%;border:1px solid var(--line);background:#131c30;
+  font-size:8px;display:flex;align-items:center;justify-content:center;color:#0a0f1a;font-weight:700}
+.oball.dot{background:#31405f}
+.oball.run{background:var(--amber)}
+.oball.four{background:var(--good)}
+.oball.six{background:#c07bff}
+.oball.wkt{background:var(--red);color:#fff}
+.oball.ext{background:#5aa3e8;color:#fff}
+
+/* ---------- touch / shot buttons ---------- */
+#controls{
+  position:absolute;left:0;right:0;bottom:0;display:flex;z-index:7;
+  padding:8px;gap:8px;justify-content:center;
+}
+.shotbtn{
+  flex:1;padding:11px 4px;border-radius:10px;cursor:pointer;user-select:none;
+  background:linear-gradient(rgba(22,35,61,.92),rgba(13,21,36,.92));
+  border:1px solid var(--line);color:var(--ink);
+  font-size:14px;text-align:center;transition:transform .05s,border-color .15s;
+  touch-action:manipulation;
+}
+.shotbtn small{display:block;color:#7d8db0;font-size:9px;letter-spacing:.1em;margin-top:2px}
+.shotbtn:active{transform:scale(.96);border-color:var(--amber)}
+#pausebtn{
+  position:absolute;top:64px;right:8px;z-index:8;width:34px;height:34px;border-radius:8px;
+  background:rgba(10,15,26,.85);border:1px solid var(--line);color:var(--ink);
+  font-size:13px;cursor:pointer;
+}
+
+/* ---------- overlays / menus ---------- */
+.overlay{
+  position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;
+  background:rgba(4,8,16,.82);backdrop-filter:blur(3px);
+}
+.overlay.hidden{display:none}
+.card{
+  background:linear-gradient(#0e1626,#0a0f1a);border:1px solid var(--line);
+  border-top:4px solid var(--amber);border-radius:12px;padding:22px 22px;text-align:center;
+  width:88%;box-shadow:0 20px 60px rgba(0,0,0,.7);
+  max-height:92%;overflow-y:auto;
+}
+.card h1{font-size:34px;color:var(--amber);text-shadow:0 0 18px rgba(255,180,36,.5)}
+.card h1 span{color:var(--ink)}
+.card h2{font-size:24px;color:var(--amber);margin-bottom:12px}
+.card p{color:#aab7d4;font-size:12px;margin:8px 0 14px}
+.menu-btn{
+  display:block;width:100%;margin:8px 0;padding:11px;border-radius:8px;cursor:pointer;
+  background:linear-gradient(#1a2a4a,#111c33);border:1px solid var(--line);color:var(--ink);
+  font-size:16px;letter-spacing:.05em;transition:border-color .15s,box-shadow .15s;
+}
+.menu-btn:hover{border-color:var(--amber);box-shadow:0 0 14px rgba(255,180,36,.25)}
+.menu-btn small{display:block;font-size:10px;color:#7d8db0;letter-spacing:.02em;margin-top:2px;font-family:system-ui}
+.menu-btn.secondary{background:#0d1424;font-size:13px}
+.stat-row{display:flex;justify-content:space-between;font-size:12px;color:#aab7d4;
+  border-bottom:1px dashed var(--line);padding:5px 2px}
+.stat-row b{color:var(--amber)}
+.bigscore{font-size:48px;color:var(--amber);text-shadow:0 0 24px rgba(255,180,36,.5);margin:6px 0}
+.setting-row{display:flex;justify-content:space-between;align-items:center;margin:9px 0;font-size:13px;color:#c4d0e8}
+.toggle{padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:#111c33;
+  color:var(--ink);cursor:pointer;font-size:12px;min-width:78px}
+.toggle.on{border-color:var(--amber);color:var(--amber)}
+.keyhint{font-size:10px;color:#68779b;margin-top:12px;line-height:1.7}
+kbd{background:#1a2740;border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:10px}
+@media (pointer:coarse){ .keyhint{display:none} }
+@media (prefers-reduced-motion:reduce){ #msg.show{animation:none} }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <canvas id="game" width="540" height="960"></canvas>
+
+  <!-- ===== HUD ===== -->
+  <div id="hud">
+    <div class="board">
+      <div class="lbl">Score</div>
+      <div class="val digits" id="hud-score">0-0</div>
+      <div class="sub" id="hud-mode">Quick Match</div>
+    </div>
+    <div class="board" style="text-align:center">
+      <div class="lbl">Over</div>
+      <div class="val digits" id="hud-over">0.0</div>
+      <div id="overballs" style="justify-content:center"></div>
+    </div>
+    <div class="board" style="text-align:right">
+      <div class="lbl" id="hud-target-lbl">Best</div>
+      <div class="val digits" id="hud-target">0</div>
+      <div class="sub" id="hud-level">Lvl 1 · Medium</div>
+    </div>
+  </div>
+
+  <div id="msg" class="display"></div>
+  <div id="ticker">Welcome to the Floodlight Smash!</div>
+  <button id="pausebtn" title="Pause (P)">&#10073;&#10073;</button>
+
+  <!-- ===== shot controls (touch + click) ===== -->
+  <div id="controls">
+    <div class="shotbtn display" data-shot="pull">&#8678; Pull<small>leg side</small></div>
+    <div class="shotbtn display" data-shot="loft">&#8679; Loft<small>straight six</small></div>
+    <div class="shotbtn display" data-shot="drive">&#8680; Drive<small>off side</small></div>
+  </div>
+
+  <!-- ===== main menu ===== -->
+  <div class="overlay" id="ov-menu">
+    <div class="card">
+      <h1 class="display">Stick <span>Cricket</span></h1>
+      <p>Floodlight Smash · watch it out of the bowler's hand, pick a shot, nail the timing.</p>
+      <button class="menu-btn display" data-mode="quick">Quick Match<small>2 overs, 3 wickets — post a big score</small></button>
+      <button class="menu-btn display" data-mode="tournament">Tournament<small>5 knockout chases, rising difficulty</small></button>
+      <button class="menu-btn display" data-mode="practice">Practice Nets<small>no wickets, timing feedback on every ball</small></button>
+      <button class="menu-btn display" data-mode="endless">Endless<small>bat until 3 wickets fall — pace keeps rising</small></button>
+      <button class="menu-btn secondary" id="btn-settings">Settings</button>
+      <div class="keyhint">
+        <kbd>&#8592;</kbd>/<kbd>A</kbd> Pull &nbsp; <kbd>&#8593;</kbd>/<kbd>W</kbd> Loft &nbsp; <kbd>&#8594;</kbd>/<kbd>D</kbd> Drive &nbsp; <kbd>P</kbd> Pause
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== settings ===== -->
+  <div class="overlay hidden" id="ov-settings">
+    <div class="card">
+      <h2 class="display">Settings</h2>
+      <div class="setting-row"><span>Sound effects</span><button class="toggle" id="set-sound">On</button></div>
+      <div class="setting-row"><span>Timing guide ring</span><button class="toggle" id="set-guide">On</button></div>
+      <div class="setting-row"><span>Base difficulty</span><button class="toggle" id="set-diff">Normal</button></div>
+      <div class="setting-row"><span>Reset high scores</span><button class="toggle" id="set-reset">Reset</button></div>
+      <button class="menu-btn display" id="btn-settings-back">Back</button>
+    </div>
+  </div>
+
+  <!-- ===== pause ===== -->
+  <div class="overlay hidden" id="ov-pause">
+    <div class="card">
+      <h2 class="display">Paused</h2>
+      <button class="menu-btn display" id="btn-resume">Resume</button>
+      <button class="menu-btn display" id="btn-restart">Restart Innings</button>
+      <button class="menu-btn secondary" id="btn-quit">Quit to Menu</button>
+    </div>
+  </div>
+
+  <!-- ===== innings / round end ===== -->
+  <div class="overlay hidden" id="ov-end">
+    <div class="card">
+      <h2 class="display" id="end-title">Innings Over</h2>
+      <div class="bigscore digits" id="end-score">0-0</div>
+      <div id="end-stats"></div>
+      <p id="end-note"></p>
+      <button class="menu-btn display" id="btn-end-primary">Play Again</button>
+      <button class="menu-btn secondary" id="btn-end-menu">Main Menu</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ==================================================================
+   STICK CRICKET — FLOODLIGHT SMASH  ·  batsman POV, 9:16 portrait
+   Single-file, object-oriented, no dependencies.
+
+   The camera sits behind the batsman looking down the pitch. The
+   simulation runs in flat "sim space" (distance down the pitch +
+   height + lateral line), and a 1/z perspective projection turns
+   that into the portrait view. Classes:
+   Store, SFX, Ball, HitBall, Batsman, Bowler, Field, Game
+   ================================================================== */
+
+/* ---------- tiny helpers ---------- */
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const rand  = (a, b) => a + Math.random() * (b - a);
+const pick  = arr => arr[(Math.random() * arr.length) | 0];
+const $     = sel => document.querySelector(sel);
+
+/* ==================================================================
+   Store — localStorage wrapper with an in-memory fallback so the
+   game still runs in sandboxed iframes / private mode.
+   ================================================================== */
+class Store {
+  constructor(prefix) {
+    this.prefix = prefix;
+    this.mem = {};
+    try {
+      const k = prefix + "__probe";
+      localStorage.setItem(k, "1");
+      localStorage.removeItem(k);
+      this.ok = true;
+    } catch (e) { this.ok = false; }
+  }
+  get(key, fallback) {
+    try {
+      const raw = this.ok ? localStorage.getItem(this.prefix + key) : this.mem[key];
+      return raw == null ? fallback : JSON.parse(raw);
+    } catch (e) { return fallback; }
+  }
+  set(key, value) {
+    const raw = JSON.stringify(value);
+    if (this.ok) { try { localStorage.setItem(this.prefix + key, raw); } catch (e) {} }
+    this.mem[key] = raw;
+  }
+}
+
+/* ==================================================================
+   SFX — all sounds synthesised with the Web Audio API.
+   Audio context is created lazily on the first user gesture.
+   ================================================================== */
+class SFX {
+  constructor() { this.ctx = null; this.enabled = true; }
+  ensure() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) this.ctx = new AC();
+    }
+    if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
+    return !!this.ctx;
+  }
+  /* short filtered-noise burst — the crack of the bat */
+  batCrack(power = 1) {
+    if (!this.enabled || !this.ensure()) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const len = 0.09, buf = ctx.createBuffer(1, ctx.sampleRate * len, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2);
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1400 + power * 900; bp.Q.value = 0.8;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.5 + power * 0.4, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    src.connect(bp).connect(g).connect(ctx.destination); src.start(t);
+    /* woody thump underneath */
+    const o = ctx.createOscillator(), og = ctx.createGain();
+    o.type = "sine"; o.frequency.setValueAtTime(180, t); o.frequency.exponentialRampToValueAtTime(70, t + 0.1);
+    og.gain.setValueAtTime(0.35 * power, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    o.connect(og).connect(ctx.destination); o.start(t); o.stop(t + 0.14);
+  }
+  /* swelling filtered noise — crowd cheer, bigger for sixes */
+  cheer(size = 1) {
+    if (!this.enabled || !this.ensure()) return;
+    const ctx = this.ctx, t = ctx.currentTime, dur = 0.9 + size * 0.7;
+    const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 900 + size * 500;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, t);
+    g.gain.exponentialRampToValueAtTime(0.28 * size, t + 0.18);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    src.connect(lp).connect(g).connect(ctx.destination); src.start(t);
+  }
+  /* descending clatter — stumps rattled */
+  wicket() {
+    if (!this.enabled || !this.ensure()) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    for (let i = 0; i < 4; i++) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "square"; o.frequency.value = 620 - i * 110 + rand(-30, 30);
+      g.gain.setValueAtTime(0.16, t + i * 0.05);
+      g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.05 + 0.09);
+      o.connect(g).connect(ctx.destination); o.start(t + i * 0.05); o.stop(t + i * 0.05 + 0.1);
+    }
+    this.cheer(0.6);
+  }
+  /* soft whoosh for a play-and-miss */
+  whoosh() {
+    if (!this.enabled || !this.ensure()) return;
+    const ctx = this.ctx, t = ctx.currentTime, dur = 0.22;
+    const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 1.5;
+    bp.frequency.setValueAtTime(500, t); bp.frequency.exponentialRampToValueAtTime(2200, t + dur);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.14, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    src.connect(bp).connect(g).connect(ctx.destination); src.start(t);
+  }
+  /* UI blip */
+  click() {
+    if (!this.enabled || !this.ensure()) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = "triangle"; o.frequency.value = 740;
+    g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+    o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + 0.08);
+  }
+  umpire() { /* two-tone whistle for extras */
+    if (!this.enabled || !this.ensure()) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    [880, 660].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "sine"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.11, t + i * 0.14);
+      g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.14 + 0.12);
+      o.connect(g).connect(ctx.destination); o.start(t + i * 0.14); o.stop(t + i * 0.14 + 0.13);
+    });
+  }
+}
+
+/* ==================================================================
+   Geometry: sim space + the perspective camera.
+
+   SIM SPACE (physics — identical to a side-on model):
+     simX : distance along the pitch, BAT_X (near) → BOWL_X (far)
+     simY : vertical, GROUND is the turf
+     wx   : lateral line, 0 = middle stump, +off side / −leg side
+
+   CAMERA: behind the batsman. depth z = (simX − BAT_X) · D2Z,
+   scale(z) = F/(F+z), classic 1/z projection onto a 540×960 canvas.
+   ================================================================== */
+const W = 540, H = 960;
+const GROUND    = 398;           // sim turf line (physics)
+const BAT_X     = 190;           // batsman's crease (sim)
+const STUMP_BX  = 148;           // batsman's stumps (sim)
+const BOWL_X    = 758;           // bowler's delivery stride (sim)
+const STUMP_WX  = 800;           // bowler-end stumps (sim)
+const RELEASE_Y = 248;           // ball release height (150px above turf)
+const GRAV      = 260;           // px/s² for the delivery (flat, quick trajectories)
+const HIT_GRAV  = 620;           // px/s² (world) for the struck ball
+
+const CX      = 270;             // screen centre line
+const HORIZON = 300;             // vanishing area
+const BASE0   = 782;             // screen y of the turf at the batsman (z = 0)
+const F       = 8;               // focal length (depth units)
+const D2Z     = 0.03;            // sim px → depth units
+const ROPE_R  = 660;             // boundary rope radius from the batter (sim px)
+
+const scaleAt  = z => F / (F + z);
+const groundAt = z => HORIZON + (BASE0 - HORIZON) * scaleAt(z);
+/* project world (lateral wx, height h above turf, depth z) → screen */
+function project(wx, h, z) {
+  const s = scaleAt(z);
+  return { x: CX + wx * s, y: groundAt(z) - h * s, s };
+}
+const simToZ = simX => (simX - BAT_X) * D2Z;
+
+/* ==================================================================
+   Delivery catalogue — physics per type plus the ideal contact
+   point. speed is px/s at base difficulty. Lateral movement:
+     line   : starting lateral offset (wx)
+     drift  : lateral velocity in the air (swing)
+     turn   : lateral kick added at the bounce (spin / seam)
+   ================================================================== */
+const DELIVERIES = {
+  fast:    { label:"Fast",       speed:520, bounceX:430, rest:0.62, friction:0.94, contactX:214, line:[-8,8],   drift:0,  turn:[-6,6],   ringH:56  },
+  swing:   { label:"Outswinger", speed:470, bounceX:410, rest:0.60, friction:0.93, contactX:222, line:[-34,-26],drift:42, turn:[0,8],    ringH:50  },
+  spin:    { label:"Leg spin",   speed:360, bounceX:330, rest:0.55, friction:0.80, contactX:230, line:[8,16],   drift:-6, turn:[-52,-34],ringH:40  },
+  yorker:  { label:"Yorker",     speed:545, bounceX:212, rest:0.35, friction:0.95, contactX:200, line:[-6,6],   drift:0,  turn:[-4,4],   ringH:12  },
+  bouncer: { label:"Bouncer",    speed:505, bounceX:560, rest:0.62, friction:0.96, contactX:240, line:[-10,6],  drift:0,  turn:[-6,6],   ringH:112 },
+};
+
+/* Shot vs delivery matchup: >1 helps, <1 hurts (affects risk + runs) */
+const MATCHUP = {
+  pull:  { fast:0.9,  swing:0.85, spin:1.0,  yorker:0.55, bouncer:1.35 },
+  loft:  { fast:1.0,  swing:0.9,  spin:1.2,  yorker:0.7,  bouncer:0.6  },
+  drive: { fast:1.1,  swing:1.0,  spin:1.05, yorker:1.25, bouncer:0.6  },
+};
+
+/* ==================================================================
+   Ball — the delivery in flight. Two parabolic segments joined at
+   the bounce, with a lateral line that swings in the air and turns
+   off the pitch. Rendered with the perspective projection plus a
+   ground shadow so depth is readable.
+   ================================================================== */
+class Ball {
+  constructor(type, speedMult) {
+    const d = DELIVERIES[type];
+    this.type = type; this.cfg = d;
+    this.x = BOWL_X; this.y = RELEASE_Y;
+    this.speed = d.speed * speedMult;
+    this.vx = -this.speed;
+    // solve initial vy so the ball lands exactly at bounceX
+    const t1 = (BOWL_X - d.bounceX) / this.speed;
+    this.vy = (GROUND - 6 - RELEASE_Y - 0.5 * GRAV * t1 * t1) / t1;
+    // lateral line + swing
+    this.wx = rand(d.line[0], d.line[1]);
+    this.vwx = d.drift;
+    this.turn = rand(d.turn[0], d.turn[1]);
+    this.bounced = false;
+    this.trail = [];
+    this.dead = false;
+    this.isWide = false;           // flagged by the Game for wides
+  }
+  update(dt) {
+    this.trail.push({ x: this.x, y: this.y, wx: this.wx });
+    if (this.trail.length > 12) this.trail.shift();
+    this.x += this.vx * dt;
+    this.vy += GRAV * dt;
+    this.y += this.vy * dt;
+    this.wx += this.vwx * dt;
+    if (!this.bounced && this.y >= GROUND - 6) {
+      this.y = GROUND - 6;
+      this.vy = -Math.abs(this.vy) * this.cfg.rest;
+      this.vx *= this.cfg.friction;
+      this.vwx = this.vwx * 0.4 + this.turn;      // grips and turns off the pitch
+      this.bounced = true;
+    }
+    // keep it on the turf if it dips again before the keeper
+    if (this.bounced && this.y >= GROUND - 6 && this.vy > 0) { this.vy = -this.vy * 0.4; this.vx *= 0.9; }
+    if (this.x < 60) this.dead = true;
+  }
+  draw(ctx) {
+    // motion trail (projected)
+    for (let i = 0; i < this.trail.length; i++) {
+      const t = this.trail[i], a = i / this.trail.length;
+      const p = project(t.wx, GROUND - t.y, simToZ(t.x));
+      ctx.fillStyle = `rgba(227,64,64,${a * 0.3})`;
+      ctx.beginPath(); ctx.arc(p.x, p.y, (5 * a + 1) * p.s, 0, 7); ctx.fill();
+    }
+    const z = simToZ(this.x);
+    const p = project(this.wx, GROUND - this.y, z);
+    // ground shadow — the depth cue that makes POV timing readable
+    const g = project(this.wx, 0, z);
+    ctx.fillStyle = "rgba(0,0,0,.35)";
+    ctx.beginPath(); ctx.ellipse(g.x, g.y, 7 * p.s, 2.6 * p.s, 0, 0, 7); ctx.fill();
+    // the ball, growing as it arrives
+    const r = 3 + 8 * p.s;
+    ctx.fillStyle = "#e34040";
+    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 7); ctx.fill();
+    ctx.strokeStyle = "#f8d0d0"; ctx.lineWidth = 1;   // seam
+    ctx.beginPath(); ctx.arc(p.x, p.y, r * 0.55, 0.6, 3.7); ctx.stroke();
+  }
+}
+
+/* ==================================================================
+   HitBall — the ball after contact, in world coords (wx, h, z).
+   The *outcome* (runs / caught) is decided at contact; the flight
+   is tuned to match it. A boundary is only "scored" visually when
+   the ball genuinely crosses the white rope: boundary-bound balls
+   keep enough pace to reach it, everything else is cut off inside.
+   ================================================================== */
+class HitBall {
+  constructor(wx, h, z, vwx, vh, vz, outcome, catcher) {
+    Object.assign(this, { wx, h, z, vwx, vh, vz, outcome, catcher });
+    this.trail = []; this.done = false; this.bounces = 0; this.t = 0;
+    this.crossed = false;                    // true the instant it reaches the rope
+  }
+  distFromBat() { return Math.hypot(this.wx, this.z / D2Z); }   // sim px, radial
+  update(dt) {
+    this.t += dt;
+    this.trail.push({ wx: this.wx, h: this.h, z: this.z });
+    if (this.trail.length > 14) this.trail.shift();
+
+    if (this.outcome.caught && this.catcher) {
+      // ease the ball into the fielder's hands over ~0.9 s
+      if (this.sx === undefined) { this.sx = this.wx; this.sh = this.h; this.sz = this.z; }
+      const k = clamp(this.t / 0.9, 0, 1), ease = k * (2 - k);
+      this.wx = this.sx + (this.catcher.wx - this.sx) * ease;
+      this.z  = this.sz + (this.catcher.z - this.sz) * ease;
+      this.h  = this.sh + (34 - this.sh) * ease + Math.sin(k * Math.PI) * 160;
+      if (k >= 1) this.done = true;
+      return;
+    }
+    this.wx += this.vwx * dt;
+    this.z  += this.vz * dt;
+    this.h  += this.vh * dt;
+    this.vh -= HIT_GRAV * dt;
+    if (this.h <= 0) {
+      this.h = 0;
+      this.vh = -this.vh * 0.45;
+      const keep = this.outcome.runs >= 4 ? 0.9 : 0.72;   // boundaries keep rolling
+      this.vwx *= keep; this.vz *= keep;
+      this.bounces++;
+    }
+    // boundary-bound balls never die on the outfield — the shot beat the field
+    if (this.outcome.runs >= 4 && this.bounces > 0) {
+      const sp = Math.hypot(this.vwx, this.vz / D2Z);
+      if (sp > 1 && sp < 280) { const f = 280 / sp; this.vwx *= f; this.vz *= f; }
+    }
+
+    const dist = this.distFromBat();
+    if (this.outcome.runs >= 4) {
+      if (!this.crossed && dist >= ROPE_R) this.crossed = true;           // rope touched → score it
+      if (dist >= ROPE_R + (this.outcome.runs === 6 ? 210 : 34)) this.done = true;  // sixes sail into the crowd
+    } else if (dist >= ROPE_R - 45) {
+      // not a boundary: the sweeper at the rope cuts it off just inside
+      this.vwx = 0; this.vz = 0; this.vh = Math.min(this.vh, 0);
+      if (this.h <= 0) this.done = true;
+    }
+    const slow = Math.abs(this.vwx) + Math.abs(this.vz) * 30 < 40;
+    if (this.z < -1.5 || (this.bounces > 2 && slow) || this.t > 3.6) this.done = true;
+  }
+  draw(ctx) {
+    for (let i = 0; i < this.trail.length; i++) {
+      const t = this.trail[i], a = i / this.trail.length;
+      const p = project(t.wx, t.h, t.z);
+      ctx.fillStyle = `rgba(255,214,120,${a * 0.4})`;
+      ctx.beginPath(); ctx.arc(p.x, p.y, (5 * a + 1) * p.s, 0, 7); ctx.fill();
+    }
+    const p = project(this.wx, this.h, this.z);
+    const g = project(this.wx, 0, this.z);
+    ctx.fillStyle = "rgba(0,0,0,.3)";
+    ctx.beginPath(); ctx.ellipse(g.x, g.y, 6 * p.s, 2.2 * p.s, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = "#e34040";
+    ctx.beginPath(); ctx.arc(p.x, p.y, 3 + 8 * p.s, 0, 7); ctx.fill();
+  }
+}
+
+/* ==================================================================
+   Batsman — seen from behind: proper stance with flexed knees,
+   batting pads, gloves and a shaped willow blade. He taps the
+   crease while relaxed, raises a backlift as the bowler runs in,
+   then whips through pull / loft / drive arcs.
+   phase: "stance" | "swing" | "follow"
+   ================================================================== */
+class Batsman {
+  constructor() { this.curAngle = -0.15; this.ready = false; this.tapT = 0; this.reset(); }
+  reset() { this.phase = "stance"; this.shot = null; this.timer = 0; this.bob = 0; }
+  play(shot) { this.phase = "swing"; this.shot = shot; this.timer = 0; this.swingFrom = this.curAngle; }
+  update(dt) {
+    this.bob += dt * 2.2; this.tapT += dt;
+    if (this.phase === "stance") {
+      /* relaxed: blade taps the crease · ready: raised backlift over the stumps */
+      const tap = this.ready ? 0 : Math.max(0, Math.sin(this.tapT * 3.2)) * 0.12;
+      const target = (this.ready ? -2.35 : -0.15) + tap;
+      this.curAngle += (target - this.curAngle) * Math.min(1, dt * 9);
+    } else if (this.phase === "swing") {
+      this.timer += dt;
+      const END = { pull: -1.5, loft: 3.0, drive: 1.6 }[this.shot];
+      const k = clamp(this.timer / 0.16, 0, 1), e = k * k * (3 - 2 * k);   // smoothstep whip
+      this.curAngle = this.swingFrom + (END - this.swingFrom) * e;
+      if (this.timer > 0.16) { this.phase = "follow"; this.timer = 0; }
+    } else {
+      this.timer += dt;
+      const drift = this.shot === "pull" ? 0.7 : 0.35;                     // carry through the line
+      this.curAngle += drift * dt * (1 - clamp(this.timer / 0.45, 0, 1));
+      if (this.timer > 0.7) this.reset();
+    }
+  }
+  /* hands lift for the backlift and rise fully for the loft */
+  handLift() {
+    if (this.phase === "stance") return this.ready ? 10 : 0;
+    if (this.shot === "loft") return this.phase === "swing" ? 10 + clamp(this.timer / 0.16, 0, 1) * 18 : 28;
+    return 8;
+  }
+  draw(ctx) {
+    const bx = CX - 40, base = BASE0 + 14 + Math.sin(this.bob) * 1.2;
+    // soft contact shadow grounding the figure
+    ctx.fillStyle = "rgba(0,0,0,.28)";
+    ctx.beginPath(); ctx.ellipse(bx + 4, base + 4, 42, 9, 0, 0, 7); ctx.fill();
+
+    const hipY = base - 62, shX = bx + 5, shY = base - 106, headY = base - 126;
+    const kneeL = { x: bx - 17, y: base - 33 }, kneeR = { x: bx + 16, y: base - 33 };
+    const ankL  = { x: bx - 21, y: base - 5 },  ankR  = { x: bx + 19, y: base - 5 };
+
+    // ---- legs: hip → flexed knee → ankle ----
+    ctx.strokeStyle = "#dfe6f2"; ctx.lineWidth = 6; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(bx - 6, hipY); ctx.lineTo(kneeL.x, kneeL.y); ctx.lineTo(ankL.x, ankL.y);
+    ctx.moveTo(bx + 6, hipY); ctx.lineTo(kneeR.x, kneeR.y); ctx.lineTo(ankR.x, ankR.y);
+    ctx.stroke();
+    // batting pads over the shins, with knee roll + strap hints
+    for (const [k, a] of [[kneeL, ankL], [kneeR, ankR]]) {
+      ctx.strokeStyle = "#ece7d6"; ctx.lineWidth = 12;
+      ctx.beginPath(); ctx.moveTo(k.x, k.y - 5); ctx.lineTo(a.x, a.y - 2); ctx.stroke();
+      ctx.strokeStyle = "#cfc7ac"; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(k.x - 6, k.y + 7); ctx.lineTo(k.x + 6, k.y + 5);
+      ctx.moveTo((k.x + a.x) / 2 - 6, (k.y + a.y) / 2 + 2); ctx.lineTo((k.x + a.x) / 2 + 6, (k.y + a.y) / 2);
+      ctx.stroke();
+    }
+    // spiked shoes
+    ctx.fillStyle = "#1c2536";
+    ctx.beginPath(); ctx.ellipse(ankL.x - 3, base - 1, 10, 5, 0, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(ankR.x + 3, base - 1, 10, 5, 0, 0, 7); ctx.fill();
+
+    // ---- torso: hunched slightly over the bat ----
+    ctx.strokeStyle = "#f2f5fb"; ctx.lineWidth = 9;
+    ctx.beginPath(); ctx.moveTo(bx, hipY); ctx.lineTo(shX, shY + 4); ctx.stroke();
+    ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(shX - 19, shY + 2); ctx.lineTo(shX + 19, shY + 2); ctx.stroke();
+
+    // ---- arms + the bat ----
+    const lift = this.handLift();
+    const hx = bx + 27, hy = shY + 20 - lift;
+    const a = this.curAngle;
+    ctx.strokeStyle = "#f2f5fb"; ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(shX - 17, shY + 3); ctx.lineTo(hx - 2, hy);   // bottom hand arm
+    ctx.moveTo(shX + 17, shY + 3); ctx.lineTo(hx + 2, hy);   // top hand arm
+    ctx.stroke();
+    // the bat: rubber grip, willow blade with edges, spine and rounded toe
+    ctx.save();
+    ctx.translate(hx, hy);
+    ctx.rotate(-a);                                          // local +y runs down the blade
+    ctx.strokeStyle = "#232936"; ctx.lineWidth = 6; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(0, -2); ctx.lineTo(0, 20); ctx.stroke();
+    const willow = ctx.createLinearGradient(-9, 0, 9, 0);
+    willow.addColorStop(0, "#caa76a"); willow.addColorStop(0.45, "#ecd7a8"); willow.addColorStop(1, "#b8945a");
+    ctx.fillStyle = willow;
+    ctx.beginPath();
+    ctx.moveTo(-6, 20);                                      // shoulders of the blade
+    ctx.lineTo(-8.5, 64);
+    ctx.quadraticCurveTo(-8.5, 78, 0, 78);                   // rounded toe
+    ctx.quadraticCurveTo(8.5, 78, 8.5, 64);
+    ctx.lineTo(6, 20);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#8a6a3f"; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, 26); ctx.lineTo(0, 72); ctx.stroke();   // spine
+    ctx.restore();
+    // gloves stacked on the grip
+    const dx = Math.sin(a), dy = Math.cos(a);
+    ctx.fillStyle = "#f6f6f0";
+    ctx.beginPath(); ctx.arc(hx + dx * 3,  hy + dy * 3,  5.5, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(hx + dx * 11, hy + dy * 11, 5.5, 0, 7); ctx.fill();
+    ctx.strokeStyle = "#d8d4c4"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(hx + dx * 3, hy + dy * 3, 5.5, 0, 7);
+    ctx.arc(hx + dx * 11, hy + dy * 11, 5.5, 0, 7); ctx.stroke();
+
+    // ---- head: neck + full helmet from behind ----
+    ctx.fillStyle = "#e8b98f";
+    ctx.fillRect(shX - 3, headY + 8, 7, 8);
+    ctx.fillStyle = "#2f6fce";
+    ctx.beginPath(); ctx.arc(shX, headY, 13.5, 0, 7); ctx.fill();
+    ctx.fillStyle = "#265da8";                               // vent panel
+    ctx.beginPath(); ctx.moveTo(shX, headY);
+    ctx.arc(shX, headY, 13.5, -0.6, 0.9); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#1d4a86"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(shX, headY, 13.5, 0, 7); ctx.stroke();
+  }
+}
+
+/* ==================================================================
+   Bowler — small at the far end of the pitch, running in with a
+   windmill action, plus the AI that chooses deliveries. It studies
+   what has hurt the batter and leans on those balls as levels climb.
+   ================================================================== */
+class Bowler {
+  constructor() {
+    this.x = 930; this.armPhase = 0; this.running = false; this.runT = 0;
+    this.memory = { fast:0, swing:0, spin:0, yorker:0, bouncer:0 }; // success score per type
+  }
+  startRunUp() { this.running = true; this.runT = 0; this.x = 930; }
+  /* returns true on the frame the ball should be released */
+  update(dt) {
+    if (!this.running) { this.armPhase *= 0.9; return false; }
+    this.runT += dt;
+    this.x = 930 - clamp(this.runT / 0.85, 0, 1) * (930 - BOWL_X);
+    this.armPhase = clamp((this.runT - 0.55) / 0.3, 0, 1) * Math.PI * 1.6;
+    if (this.runT >= 0.85) { this.running = false; return true; }
+    return false;
+  }
+  /* AI: weighted pick, biased by level + what has worked before */
+  chooseDelivery(level, lastRuns) {
+    const w = { fast: 3, swing: 1 + level * 0.4, spin: 1 + level * 0.35,
+                yorker: level >= 2 ? 0.6 + level * 0.35 : 0, bouncer: level >= 2 ? 0.6 + level * 0.3 : 0 };
+    for (const k in w) w[k] += this.memory[k] * (0.4 + level * 0.15);   // exploit weaknesses
+    if (lastRuns >= 4) { w.yorker *= 1.6; w.bouncer *= 1.4; }           // answer a boundary with a surprise
+    let total = 0; for (const k in w) total += w[k];
+    let r = Math.random() * total;
+    for (const k in w) { r -= w[k]; if (r <= 0) return k; }
+    return "fast";
+  }
+  learn(type, tookWicket, runsConceded) {
+    this.memory[type] += tookWicket ? 2 : (runsConceded === 0 ? 0.6 : -0.3 * runsConceded / 4);
+    this.memory[type] = clamp(this.memory[type], -2, 5);
+  }
+  draw(ctx) {
+    const z = simToZ(this.x);
+    const p = project(16, 0, z);           // bowls from beside the stumps (over the wicket)
+    const s = p.s, x = p.x, y = p.y;
+    const stride = this.running ? Math.sin(this.runT * 18) * 14 * s : 0;
+    ctx.strokeStyle = "#f2f5fb"; ctx.lineWidth = Math.max(2, 4.5 * s); ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x, y - 52 * s); ctx.lineTo(x - 9 * s + stride, y);
+    ctx.moveTo(x, y - 52 * s); ctx.lineTo(x + 9 * s - stride, y);
+    ctx.moveTo(x, y - 52 * s); ctx.lineTo(x, y - 92 * s);
+    ctx.stroke();
+    ctx.fillStyle = "#f2f5fb";
+    ctx.beginPath(); ctx.arc(x, y - 100 * s, 9 * s, 0, 7); ctx.fill();
+    // bowling arm windmills over the top
+    const a = this.armPhase - Math.PI * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y - 84 * s);
+    ctx.lineTo(x + Math.cos(a) * 26 * s, y - 84 * s + Math.sin(a) * 26 * s);
+    ctx.moveTo(x, y - 84 * s); ctx.lineTo(x - 15 * s, y - 66 * s);
+    ctx.stroke();
+    // ball in hand pre-release
+    if (this.running && this.armPhase < Math.PI * 1.55) {
+      ctx.fillStyle = "#e34040";
+      ctx.beginPath();
+      ctx.arc(x + Math.cos(a) * 28 * s, y - 84 * s + Math.sin(a) * 28 * s, 4 * s + 1.5, 0, 7);
+      ctx.fill();
+    }
+  }
+}
+
+/* ==================================================================
+   Field — the stadium in perspective. The stands now come right
+   down to the advertising boards, and the white rope is a genuine
+   oval boundary (radius ROPE_R) hugging them — the same line the
+   scoring uses, so what you see is what counts.
+   ================================================================== */
+class Field {
+  constructor() {
+    // fielders in world coords (lateral wx, depth z) — two sweepers on the rope
+    this.fielders = [
+      { wx:-250, z:4.5 }, { wx: 230, z:6   },
+      { wx:-140, z:11  }, { wx: 160, z:12.5},
+      { wx:-320, z:16  }, { wx: 295, z:17  },
+    ];
+    // three tiers of crowd, bigger dots nearer the front
+    this.crowdSeed = [];
+    for (let i = 0; i < 260; i++) {
+      const y = rand(160, 402);
+      this.crowdSeed.push({ x: rand(0, W), y, r: 1 + ((y - 160) / 242) * 2, p: rand(0, 7) });
+    }
+    this.cheerT = 0;
+    // precompute the rope polyline: a world circle of radius ROPE_R around the batter
+    this.rope = [];
+    for (let th = -82; th <= 82.01; th += 3.5) {
+      const rad = th * Math.PI / 180;
+      this.rope.push(project(ROPE_R * Math.sin(rad), 0, ROPE_R * Math.cos(rad) * D2Z));
+    }
+  }
+  cheer() { this.cheerT = 1.4; }
+  update(dt) { this.cheerT = Math.max(0, this.cheerT - dt); }
+  drawStumps(ctx, z, broken) {
+    const s = scaleAt(z);
+    ctx.strokeStyle = "#e8d9b8"; ctx.lineWidth = Math.max(2.5, 5 * s); ctx.lineCap = "round";
+    for (let i = -1; i <= 1; i++) {
+      const b = project(i * 9, 0, z);
+      ctx.beginPath(); ctx.moveTo(b.x, b.y);
+      if (broken && i === 0) {
+        const t = project(i * 9 + 16, 22, z);        // middle stump knocked back
+        ctx.lineTo(t.x, t.y);
+      } else {
+        const t = project(i * 9, 38, z);
+        ctx.lineTo(t.x, t.y);
+      }
+      ctx.stroke();
+    }
+    if (!broken) {  // bails
+      const l = project(-11, 39, z), r = project(11, 39, z);
+      ctx.strokeStyle = "#f7ecd2"; ctx.lineWidth = Math.max(2, 3.5 * s);
+      ctx.beginPath(); ctx.moveTo(l.x, l.y); ctx.lineTo(r.x, r.y); ctx.stroke();
+    }
+  }
+  drawFielder(ctx, wx, z) {
+    const p = project(wx, 0, z), s = p.s;
+    ctx.strokeStyle = "#5f7092"; ctx.lineWidth = Math.max(1.6, 3.5 * s); ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y - 34 * s); ctx.lineTo(p.x, p.y - 14 * s);
+    ctx.moveTo(p.x, p.y - 14 * s); ctx.lineTo(p.x - 7 * s, p.y);
+    ctx.moveTo(p.x, p.y - 14 * s); ctx.lineTo(p.x + 7 * s, p.y);
+    ctx.moveTo(p.x, p.y - 27 * s); ctx.lineTo(p.x - 9 * s, p.y - 18 * s);
+    ctx.moveTo(p.x, p.y - 27 * s); ctx.lineTo(p.x + 9 * s, p.y - 18 * s);
+    ctx.stroke();
+    ctx.fillStyle = "#5f7092";
+    ctx.beginPath(); ctx.arc(p.x, p.y - 40 * s, 5.5 * s, 0, 7); ctx.fill();
+  }
+  draw(ctx, t, stumpsBroken) {
+    // ----- sky -----
+    const sky = ctx.createLinearGradient(0, 0, 0, 170);
+    sky.addColorStop(0, "#0b1526"); sky.addColorStop(1, "#132441");
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, 170);
+    // ----- floodlight pylons (behind the stands) -----
+    for (const fx of [78, 462]) {
+      ctx.strokeStyle = "#2a3a58"; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.moveTo(fx, 158); ctx.lineTo(fx, 34); ctx.stroke();
+      ctx.fillStyle = "#fff6d8";
+      for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.arc(fx + i * 10, 30, 4, 0, 7); ctx.fill(); }
+    }
+    // ----- stands: three tiers coming right down to the boards -----
+    ctx.fillStyle = "#101c31"; ctx.fillRect(0, 150, W, 262);
+    ctx.fillStyle = "#0c1626"; ctx.fillRect(0, 238, W, 9); ctx.fillRect(0, 326, W, 9);
+    for (const c of this.crowdSeed) {
+      const hop = this.cheerT > 0 ? Math.abs(Math.sin(t * 10 + c.p)) * 4 * this.cheerT : Math.sin(t + c.p) * 0.5;
+      ctx.fillStyle = `hsl(${(c.p * 57) % 360} 40% ${this.cheerT > 0 ? 70 : 50}%)`;
+      ctx.beginPath(); ctx.arc(c.x, c.y - hop, c.r, 0, 7); ctx.fill();
+    }
+    // ----- sight screen behind the bowler's arm -----
+    ctx.fillStyle = "#0e1a2e"; ctx.fillRect(CX - 64, 340, 128, 70);
+    ctx.strokeStyle = "#22314d"; ctx.lineWidth = 2; ctx.strokeRect(CX - 64, 340, 128, 70);
+    // ----- advertising boards, right behind the rope -----
+    ctx.fillStyle = "#0a2b18"; ctx.fillRect(0, 410, W, 26);
+    ctx.fillStyle = "#ffb424"; ctx.font = "bold 11px Impact, sans-serif";
+    for (let x = 14; x < W; x += 165) ctx.fillText("FLOODLIGHT SMASH", x, 427);
+    // ----- floodlight glow washing over the field -----
+    for (const fx of [78, 462]) {
+      const cone = ctx.createLinearGradient(fx, 36, fx, 700);
+      cone.addColorStop(0, "rgba(255,246,216,.12)"); cone.addColorStop(1, "rgba(255,246,216,0)");
+      ctx.fillStyle = cone;
+      ctx.beginPath(); ctx.moveTo(fx - 22, 36); ctx.lineTo(fx + 22, 36);
+      ctx.lineTo(fx + 180, 700); ctx.lineTo(fx - 180, 700); ctx.closePath(); ctx.fill();
+    }
+    // ----- outfield -----
+    const grass = ctx.createLinearGradient(0, 436, 0, H);
+    grass.addColorStop(0, "#1a4d2b"); grass.addColorStop(0.5, "#215f36"); grass.addColorStop(1, "#2a7040");
+    ctx.fillStyle = grass; ctx.fillRect(0, 436, W, H - 436);
+    // mow rings — alternating bands at even depth steps inside the rope
+    for (let i = 0; i < 9; i++) {
+      const zTop = 19.8 - i * 2.2, zBot = zTop - 2.2;
+      const yTop = groundAt(Math.max(zTop, 0)), yBot = i === 8 ? H : groundAt(Math.max(zBot, 0));
+      ctx.fillStyle = i % 2 ? "rgba(255,255,255,.035)" : "rgba(0,0,0,.05)";
+      ctx.fillRect(0, yTop, W, Math.max(0, yBot - yTop));
+    }
+    // ----- beyond-the-rope apron: slightly darker turf outside the oval -----
+    const rp = this.rope;
+    ctx.fillStyle = "rgba(4,10,18,.2)";
+    ctx.beginPath();
+    ctx.moveTo(rp[0].x, rp[0].y);
+    for (let i = 1; i < rp.length; i++) ctx.lineTo(rp[i].x, rp[i].y);
+    ctx.lineTo(W + 80, 436); ctx.lineTo(-80, 436); ctx.closePath(); ctx.fill();
+    // ----- the white rope itself: the real boundary the scoring uses -----
+    ctx.strokeStyle = "rgba(0,0,0,.35)"; ctx.lineWidth = 6;      // soft shadow under the rope
+    ctx.beginPath(); ctx.moveTo(rp[0].x, rp[0].y + 2);
+    for (let i = 1; i < rp.length; i++) ctx.lineTo(rp[i].x, rp[i].y + 2);
+    ctx.stroke();
+    ctx.strokeStyle = "#f2f5fb"; ctx.lineWidth = 4.5; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(rp[0].x, rp[0].y);
+    for (let i = 1; i < rp.length; i++) ctx.lineTo(rp[i].x, rp[i].y);
+    ctx.stroke();
+    // ----- pitch strip: trapezoid receding to the bowler -----
+    const zNear = -0.4, zFar = simToZ(STUMP_WX) + 0.8;
+    const nl = project(-58, 0, zNear), nr = project(58, 0, zNear);
+    const fl = project(-58, 0, zFar),  fr = project(58, 0, zFar);
+    const strip = ctx.createLinearGradient(0, fl.y, 0, nl.y);
+    strip.addColorStop(0, "#b39c66"); strip.addColorStop(1, "#cdb67c");
+    ctx.fillStyle = strip;
+    ctx.beginPath(); ctx.moveTo(nl.x, nl.y); ctx.lineTo(nr.x, nr.y);
+    ctx.lineTo(fr.x, fr.y); ctx.lineTo(fl.x, fl.y); ctx.closePath(); ctx.fill();
+    // creases at both ends
+    ctx.strokeStyle = "rgba(255,255,255,.75)"; ctx.lineWidth = 2;
+    for (const zc of [simToZ(176), simToZ(772)]) {
+      const a = project(-52, 0, zc), b = project(52, 0, zc);
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    }
+    // ----- far fielders first (painter's order back → front) -----
+    for (const f of this.fielders.slice().sort((a, b) => b.z - a.z)) this.drawFielder(ctx, f.wx, f.z);
+    // bowler-end stumps (far, small)
+    this.drawStumps(ctx, simToZ(STUMP_WX), false);
+    // batsman-end stumps (right under our batter)
+    this.drawStumps(ctx, simToZ(STUMP_BX), stumpsBroken);
+  }
+}
+
+/* ==================================================================
+   Game — the conductor. State machine, modes, scoring, difficulty,
+   input, HUD and the main loop. (Logic identical to the side-view
+   build — only the presentation is POV.)
+   States: menu | runup | delivery | result | betweenBalls | paused
+           | inningsEnd
+   ================================================================== */
+const MODES = {
+  quick:      { name:"Quick Match",  overs:2,  wickets:3,  chase:false, ramp:0.5 },
+  tournament: { name:"Tournament",   overs:2,  wickets:2,  chase:true,  ramp:1   },
+  practice:   { name:"Practice Nets",overs:Infinity, wickets:Infinity, chase:false, ramp:0.25 },
+  endless:    { name:"Endless",      overs:Infinity, wickets:3,  chase:false, ramp:0.8 },
+};
+const COMMENTARY = {
+  6:   ["That's OUT of the ground!", "Into the second tier!", "Maximum! The crowd is up!", "Launched into the night sky!"],
+  4:   ["Races away to the rope!", "Pierces the field — four!", "Cracked away for four!", "One bounce, over the rope!"],
+  run: ["Worked away for runs.", "Good running between the wickets.", "Placed into the gap."],
+  dot: ["Solid defence.", "No run — good ball.", "Straight to the fielder."],
+  miss:["Beaten all ends up!", "Swings... and misses!", "Whoosh — nothing on it."],
+  wkt: ["Timber! The stumps are shattered!", "Caught! What a grab in the deep!", "Gone! Big appeal, big finish!"],
+};
+
+class Game {
+  constructor() {
+    this.canvas = $("#game");
+    this.ctx = this.canvas.getContext("2d");
+    this.store = new Store("stickcricket_");
+    this.sfx = new SFX();
+    this.field = new Field();
+    this.batsman = new Batsman();
+    this.bowler = new Bowler();
+
+    this.settings = this.store.get("settings", { sound:true, guide:true, diff:"Normal" });
+    this.sfx.enabled = this.settings.sound;
+
+    this.state = "menu";
+    this.ball = null; this.hitBall = null;
+    this.stumpsBroken = false;
+    this.time = 0; this.resultTimer = 0; this.guidePulse = 0;
+
+    this.bindUI();
+    this.bindInput();
+    this.showOverlay("ov-menu");
+    this.syncSettingsUI();
+
+    // main loop
+    this.last = performance.now();
+    requestAnimationFrame(ts => this.frame(ts));
+  }
+
+  /* ---------------- innings / mode setup ---------------- */
+  startMode(modeKey) {
+    this.modeKey = modeKey;
+    this.mode = MODES[modeKey];
+    this.tRound = 1;                              // tournament round
+    this.startInnings();
+  }
+  startInnings() {
+    const diffBoost = { Easy:-0.5, Normal:0, Hard:1 }[this.settings.diff];
+    this.level = clamp(1 + (this.modeKey === "tournament" ? this.tRound - 1 : 0) + diffBoost, 1, 10);
+    this.score = 0; this.wickets = 0; this.balls = 0; this.extras = 0;
+    this.fours = 0; this.sixes = 0; this.dots = 0; this.lastRuns = 0;
+    this.overLog = [];
+    this.bowler.memory = { fast:0, swing:0, spin:0, yorker:0, bouncer:0 };
+    this.target = this.mode.chase ? 12 + this.tRound * 5 + ((Math.random() * 5) | 0) : null;
+    this.stumpsBroken = false;
+    this.hitBall = null; this.ball = null;
+    this.hideOverlays();
+    this.setTicker(this.target != null
+      ? `Round ${this.tRound}: chase ${this.target} off ${this.mode.overs * 6} balls!`
+      : `${this.mode.name} — middle it and clear the ropes!`);
+    this.updateHUD();
+    this.queueNextBall(600);
+  }
+
+  /* ---------------- ball lifecycle ---------------- */
+  queueNextBall(delay = 1100) {
+    this.state = "betweenBalls";
+    clearTimeout(this._nb);
+    this._nb = setTimeout(() => { if (this.state === "betweenBalls") this.startRunUp(); }, delay);
+  }
+  startRunUp() {
+    this.stumpsBroken = false;
+    this._celebrated = false;                 // boundary FX fires once, at the rope
+    this.batsman.reset();
+    this.hitBall = null;
+    // AI picks the delivery, extras are decided up-front
+    this.deliveryType = this.bowler.chooseDelivery(this.level, this.lastRuns);
+    const extraRoll = Math.random();
+    this.pendingExtra = extraRoll < 0.05 ? "wide" : extraRoll < 0.085 ? "noball" : null;
+    this.bowler.startRunUp();
+    this.state = "runup";
+  }
+  release() {
+    const speedMult = (1 + (this.level - 1) * 0.055) * (this.pendingExtra === "noball" ? 1.05 : 1);
+    this.ball = new Ball(this.deliveryType, clamp(speedMult, 1, 1.65));
+    if (this.pendingExtra === "wide") {
+      // sprayed way down the leg or off side — visibly unreachable
+      const side = Math.random() < 0.5 ? -1 : 1;
+      this.ball.wx = side * 40; this.ball.vwx = side * 150; this.ball.turn = 0;
+      this.ball.isWide = true;
+      this.setTicker("It's slipped out of the hand...");
+    } else {
+      this.setTicker(`${DELIVERIES[this.deliveryType].label} coming in...`);
+      if (this.pendingExtra === "noball") this.flashMsg("NO BALL!", "good");
+    }
+    this.state = "delivery";
+    this.swung = false;
+  }
+
+  /* ---------------- the shot ---------------- */
+  playShot(shot) {
+    if (this.state !== "delivery" || this.swung || !this.ball || this.ball.isWide) {
+      if (this.state === "delivery" && this.ball && this.ball.isWide && !this.swung) {
+        this.swung = true; this.batsman.play(shot); this.sfx.whoosh(); // can't reach a wide
+      }
+      return;
+    }
+    this.swung = true;
+    this.batsman.play(shot);
+
+    const cfg = this.ball.cfg;
+    // timing error in ms at the ideal contact point for this delivery
+    const errMs = ((this.ball.x - cfg.contactX) / Math.abs(this.ball.vx)) * 1000;
+    const shrink = 1 - (this.level - 1) * 0.045;                 // windows tighten with level
+    const abs = Math.abs(errMs);
+    let quality;
+    if      (abs <= 28 * shrink)  quality = "perfect";
+    else if (abs <= 62 * shrink)  quality = "good";
+    else if (abs <= 105 * shrink) quality = "okay";
+    else if (abs <= 160)          quality = "poor";
+    else                          quality = "miss";
+
+    if (quality === "miss") { this.sfx.whoosh(); return; }        // ball continues to the stumps
+
+    const match = MATCHUP[shot][this.ball.type];                  // shot-vs-delivery suitability
+    this.resolveContact(shot, quality, errMs, match);
+  }
+
+  /* Decide the outcome, then launch a flight that matches it. */
+  resolveContact(shot, quality, errMs, match) {
+    const eff = { perfect:1, good:0.72, okay:0.45, poor:0.2 }[quality] * match;
+    let runs = 0, caught = false;
+
+    if (eff >= 0.95)      runs = shot === "drive" ? 4 : 6;
+    else if (eff >= 0.7)  runs = shot === "loft" ? (Math.random() < 0.5 ? 6 : 4) : 4;
+    else if (eff >= 0.5)  runs = pick([2, 3, 4]);
+    else if (eff >= 0.32) runs = pick([1, 1, 2]);
+    else if (eff >= 0.18) { runs = pick([0, 1]); caught = shot === "loft" && Math.random() < 0.45; }
+    else                  { runs = 0; caught = Math.random() < (shot === "loft" ? 0.65 : 0.35); }
+
+    /* ----- launch vector in world coords (wx lateral, h up, z away) -----
+       pull → leg side (−wx), drive → off side (+wx), loft → straight (+z) */
+    const dir = shot === "pull" ? -1 : shot === "drive" ? 1 : 0;
+    const boundary = runs >= 4;
+    const missAngle = clamp(errMs / 300, -0.5, 0.5);              // early drags, late slices
+    let vwx, vz, vh;
+    if (shot === "loft") {
+      vz  = boundary ? (runs === 6 ? 19 : 16) : 5 + eff * 6;
+      vh  = runs === 6 ? 430 : boundary ? 170 : 120 + eff * 120;
+      vwx = missAngle * 160;
+    } else {
+      vwx = dir * (boundary ? 350 : 120 + eff * 160) * (1 - Math.abs(missAngle) * 0.4);
+      vz  = 3 + eff * 6 + Math.abs(missAngle) * 3;
+      vh  = runs === 6 ? 400 : boundary ? 120 : 70 + eff * 110;
+    }
+    const catcher = caught ? this.pickCatcher(shot) : null;
+    const bz = simToZ(this.ball.x), bh = GROUND - this.ball.y, bwx = this.ball.wx;
+    this.hitBall = new HitBall(bwx, bh, bz, vwx, vh, vz, { runs, caught }, catcher);
+    this.ball = null;
+
+    this.sfx.batCrack(eff);
+    this.contactOutcome = { runs, caught, quality };
+    if (this.modeKey === "practice")
+      this.setTicker(`${quality.toUpperCase()} — ${Math.round(Math.abs(errMs))}ms ${errMs > 0 ? "early" : "late"} · ${DELIVERIES[this.deliveryType].label}`);
+    this.state = "result"; this.resultTimer = 0;
+  }
+  /* nearest fielder on the side the shot went */
+  pickCatcher(shot) {
+    const targetWx = shot === "pull" ? -180 : shot === "drive" ? 180 : 0;
+    const targetZ  = shot === "loft" ? 14 : 8;
+    return this.field.fielders.reduce((a, b) =>
+      Math.abs(b.wx - targetWx) + Math.abs(b.z - targetZ) * 18 <
+      Math.abs(a.wx - targetWx) + Math.abs(a.z - targetZ) * 18 ? b : a);
+  }
+
+  /* ---------------- resolving each ball ---------------- */
+  finishBall(kind, runs) {
+    /* kind: "runs" | "caught" | "bowled" | "dot" | "wide" | "noball" */
+    let countsAsBall = true, wicket = false, symbol = "•", cls = "dot";
+    switch (kind) {
+      case "wide":
+        this.score++; this.extras++; countsAsBall = false; symbol = "wd"; cls = "ext";
+        this.flashMsg("WIDE +1", "good"); this.sfx.umpire();
+        this.setTicker("Called wide — a free run and the ball again."); break;
+      case "noball":
+        this.score += 1 + runs; this.extras++; countsAsBall = false; symbol = "nb"; cls = "ext";
+        if (runs >= 4 && !this._celebrated) this.boundaryFX(runs);
+        this.setTicker(`No ball! ${runs ? runs + " more off the bat." : "One to the total."}`); break;
+      case "caught":
+        wicket = true; symbol = "W"; cls = "wkt";
+        this.flashMsg("CAUGHT!", "bad"); this.sfx.wicket();
+        this.setTicker(pick(COMMENTARY.wkt)); break;
+      case "bowled":
+        wicket = true; symbol = "W"; cls = "wkt"; this.stumpsBroken = true;
+        this.flashMsg("BOWLED!", "bad"); this.sfx.wicket();
+        this.setTicker("Cleaned him up — the stumps are everywhere!"); break;
+      case "dot":
+        this.dots++; this.setTicker(pick(this.swung ? COMMENTARY.dot : COMMENTARY.miss)); break;
+      default: /* runs */
+        this.score += runs; symbol = String(runs);
+        cls = runs >= 6 ? "six" : runs >= 4 ? "four" : "run";
+        if (runs >= 4 && !this._celebrated) this.boundaryFX(runs);
+        else { this.flashMsg("+" + runs); this.setTicker(pick(COMMENTARY.run)); }
+    }
+    if (wicket && this.modeKey !== "practice") this.wickets++;
+    this.lastRuns = kind === "runs" ? runs : 0;
+    this.bowler.learn(this.deliveryType, wicket, this.lastRuns);
+
+    if (countsAsBall) {
+      this.balls++;
+      this.overLog.push({ symbol, cls });
+      if (this.overLog.length > 6) this.overLog = this.overLog.slice(-6);
+    }
+    this.updateHUD();
+
+    /* ----- innings end checks ----- */
+    const oversDone = this.balls >= this.mode.overs * 6;
+    const allOut = this.wickets >= this.mode.wickets;
+    const chased = this.target != null && this.score >= this.target;
+    if (chased) return this.endInnings("won");
+    if (oversDone || allOut) {
+      if (this.target != null) return this.endInnings("lost");
+      return this.endInnings("done");
+    }
+    /* over break */
+    if (countsAsBall && this.balls % 6 === 0) {
+      if (this.modeKey === "endless" || this.modeKey === "practice") {
+        this.level = clamp(this.level + this.mode.ramp, 1, 10);
+        this.flashMsg("OVER! LEVEL UP", "good");
+      } else this.flashMsg("END OF OVER");
+      this.overLog = [];
+      this.updateHUD();
+      this.queueNextBall(1600);
+    } else {
+      this.queueNextBall(wicket ? 1700 : 1100);
+    }
+  }
+  boundaryFX(runs) {
+    this.flashMsg(runs >= 6 ? "SIX!" : "FOUR!", "good");
+    this.sfx.cheer(runs >= 6 ? 1.4 : 1);
+    this.field.cheer();
+    if (runs >= 6) this.sixes++; else this.fours++;
+    this.setTicker(pick(COMMENTARY[runs >= 6 ? 6 : 4]));
+  }
+
+  /* ---------------- innings end / progression ---------------- */
+  endInnings(result) {
+    this.state = "inningsEnd";
+    const oversStr = `${(this.balls / 6) | 0}.${this.balls % 6}`;
+    const bestKey = "best_" + this.modeKey;
+    const prevBest = this.store.get(bestKey, 0);
+    let title, note, primary = "Play Again", newBest = false;
+
+    if (this.modeKey === "tournament") {
+      if (result === "won") {
+        if (this.tRound >= 5) {
+          title = "🏆 CHAMPIONS!"; note = "You've swept all five rounds under the lights.";
+          const w = this.store.get("best_tournament", 0);
+          if (5 > w) { this.store.set("best_tournament", 5); newBest = true; }
+        } else {
+          title = `Round ${this.tRound} won!`; note = "The bowling gets sharper next round."; primary = "Next Round";
+          if (this.tRound > prevBest) { this.store.set(bestKey, this.tRound); newBest = true; }
+        }
+      } else {
+        title = "Chase failed"; note = `Needed ${this.target}. Knocked out in round ${this.tRound}.`; primary = "Retry Tournament";
+      }
+    } else {
+      title = this.modeKey === "practice" ? "Nets session over" : "Innings over";
+      note = "";
+      if (this.score > prevBest) { this.store.set(bestKey, this.score); newBest = true; note = "New high score!"; }
+      else if (prevBest) note = `High score: ${prevBest}`;
+    }
+    $("#end-title").textContent = title;
+    $("#end-score").textContent = `${this.score}-${this.wickets}`;
+    $("#end-note").textContent = note + (newBest ? " 🌟" : "");
+    $("#end-stats").innerHTML = [
+      ["Overs", oversStr], ["Fours", this.fours], ["Sixes", this.sixes],
+      ["Dot balls", this.dots], ["Extras", this.extras],
+      ["Strike rate", this.balls ? Math.round(this.score / this.balls * 100) : 0],
+    ].map(([k, v]) => `<div class="stat-row"><span>${k}</span><b>${v}</b></div>`).join("");
+    this._endResult = result;
+    $("#btn-end-primary").textContent = primary;
+    setTimeout(() => this.showOverlay("ov-end"), 900);
+  }
+
+  /* ---------------- main loop ---------------- */
+  frame(ts) {
+    const dt = Math.min((ts - this.last) / 1000, 0.05);
+    this.last = ts;
+    if (this.state !== "paused") this.update(dt);
+    this.draw();
+    requestAnimationFrame(t => this.frame(t));
+  }
+  update(dt) {
+    this.time += dt;
+    this.field.update(dt);
+    this.batsman.ready = this.state === "runup" || this.state === "delivery";
+    this.batsman.update(dt);
+    this.guidePulse += dt * 6;
+
+    if (this.state === "runup") {
+      if (this.bowler.update(dt)) this.release();
+    } else if (this.state === "delivery" && this.ball) {
+      this.ball.update(dt);
+      // ball got past the bat
+      if (this.ball.x <= STUMP_BX + 18 && !this.ball.dead) {
+        this.ball.dead = true;
+        if (this.ball.isWide) { this.finishBall("wide", 0); this.ball = null; return; }
+        // did it hit the stumps? needs the right height AND line
+        const hitsStumps = this.ball.y > GROUND - 70 && this.ball.y <= GROUND &&
+                           Math.abs(this.ball.wx) < 26 &&
+                           this.ball.type !== "bouncer" && Math.random() < 0.7;
+        this.ball = null;
+        if (this.pendingExtra === "noball") this.finishBall("noball", 0);
+        else if (hitsStumps) this.finishBall("bowled", 0);
+        else this.finishBall("dot", 0);
+      }
+    } else if (this.state === "result" && this.hitBall) {
+      this.hitBall.update(dt);
+      // the moment the ball touches the rope, the crowd gets it
+      if (this.hitBall.crossed && !this._celebrated) {
+        this._celebrated = true;
+        this.boundaryFX(this.contactOutcome.runs);
+      }
+      this.resultTimer += dt;
+      if (this.hitBall.done || this.resultTimer > 3.4) {
+        const o = this.contactOutcome;
+        this.hitBall = null;
+        if (this.pendingExtra === "noball") this.finishBall("noball", o.caught ? 0 : o.runs);
+        else if (o.caught) this.finishBall("caught", 0);
+        else if (o.runs > 0) this.finishBall("runs", o.runs);
+        else this.finishBall("dot", 0);
+      }
+    }
+  }
+  draw() {
+    const ctx = this.ctx;
+    ctx.clearRect(0, 0, W, H);
+    this.field.draw(ctx, this.time, this.stumpsBroken);
+
+    // timing guide ring at the ideal contact point (projected)
+    if (this.settings.guide && this.state === "delivery" && this.ball && !this.ball.isWide) {
+      const cfg = this.ball.cfg;
+      const near = clamp(1 - Math.abs(this.ball.x - cfg.contactX) / 260, 0, 1);
+      const p = project(this.ball.wx, cfg.ringH, simToZ(cfg.contactX));
+      ctx.strokeStyle = `rgba(255,180,36,${0.25 + near * 0.6})`;
+      ctx.lineWidth = 2 + near * 2;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, (16 + Math.sin(this.guidePulse) * 2) * p.s + 6, 0, 7);
+      ctx.stroke();
+    }
+    this.bowler.draw(ctx);
+    if (this.ball) this.ball.draw(ctx);
+    if (this.hitBall) this.hitBall.draw(ctx);
+    this.batsman.draw(ctx);          // foreground: our batter over everything
+  }
+
+  /* ---------------- HUD / overlays ---------------- */
+  updateHUD() {
+    $("#hud-score").textContent = `${this.score ?? 0}-${this.wickets ?? 0}`;
+    $("#hud-mode").textContent = this.mode ? this.mode.name + (this.modeKey === "tournament" ? ` · Rd ${this.tRound}/5` : "") : "";
+    $("#hud-over").textContent = `${(this.balls / 6) | 0}.${this.balls % 6}`;
+    const pace = this.level < 3 ? "Medium" : this.level < 5 ? "Brisk" : this.level < 7 ? "Fast" : "Express!";
+    $("#hud-level").textContent = `Lvl ${Math.round(this.level)} · ${pace}`;
+    if (this.target != null) {
+      $("#hud-target-lbl").textContent = "Target";
+      $("#hud-target").textContent = this.target;
+    } else {
+      $("#hud-target-lbl").textContent = "Best";
+      $("#hud-target").textContent = this.store.get("best_" + this.modeKey, 0);
+    }
+    const wrap = $("#overballs");
+    wrap.innerHTML = "";
+    (this.overLog || []).forEach(b => {
+      const el = document.createElement("div");
+      el.className = "oball " + b.cls; el.textContent = b.symbol === "•" ? "" : b.symbol;
+      if (b.symbol === "•") el.classList.add("dot");
+      wrap.appendChild(el);
+    });
+  }
+  flashMsg(text, tone = "") {
+    const el = $("#msg");
+    el.textContent = text;
+    el.className = "display show " + tone;
+    clearTimeout(this._msgT);
+    this._msgT = setTimeout(() => el.classList.remove("show"), 1100);
+  }
+  setTicker(t) { $("#ticker").textContent = t; }
+  showOverlay(id) { document.querySelectorAll(".overlay").forEach(o => o.classList.add("hidden")); $("#" + id).classList.remove("hidden"); }
+  hideOverlays() { document.querySelectorAll(".overlay").forEach(o => o.classList.add("hidden")); }
+
+  /* ---------------- pause / quit ---------------- */
+  togglePause() {
+    if (this.state === "menu" || this.state === "inningsEnd") return;
+    if (this.state === "paused") {
+      this.state = this._resumeState;
+      this.hideOverlays();
+      if (this.state === "betweenBalls") this.queueNextBall(700);
+    } else {
+      this._resumeState = this.state;
+      this.state = "paused";
+      clearTimeout(this._nb);
+      this.showOverlay("ov-pause");
+    }
+  }
+  quitToMenu() {
+    this.state = "menu";
+    this.ball = this.hitBall = null;
+    clearTimeout(this._nb);
+    this.showOverlay("ov-menu");
+    this.setTicker("Welcome back to the Floodlight Smash!");
+  }
+
+  /* ---------------- settings ---------------- */
+  syncSettingsUI() {
+    const s = this.settings;
+    const set = (id, on, label) => { const b = $(id); b.classList.toggle("on", on); b.textContent = label; };
+    set("#set-sound", s.sound, s.sound ? "On" : "Off");
+    set("#set-guide", s.guide, s.guide ? "On" : "Off");
+    set("#set-diff", true, s.diff);
+  }
+  saveSettings() { this.store.set("settings", this.settings); this.syncSettingsUI(); }
+
+  /* ---------------- input wiring ---------------- */
+  bindUI() {
+    document.querySelectorAll("[data-mode]").forEach(btn =>
+      btn.addEventListener("click", () => { this.sfx.click(); this.startMode(btn.dataset.mode); }));
+    $("#btn-settings").addEventListener("click", () => { this.sfx.click(); this.showOverlay("ov-settings"); });
+    $("#btn-settings-back").addEventListener("click", () => { this.sfx.click(); this.showOverlay("ov-menu"); });
+    $("#set-sound").addEventListener("click", () => { this.settings.sound = !this.settings.sound; this.sfx.enabled = this.settings.sound; this.saveSettings(); this.sfx.click(); });
+    $("#set-guide").addEventListener("click", () => { this.settings.guide = !this.settings.guide; this.saveSettings(); this.sfx.click(); });
+    $("#set-diff").addEventListener("click", () => {
+      const order = ["Easy", "Normal", "Hard"];
+      this.settings.diff = order[(order.indexOf(this.settings.diff) + 1) % 3];
+      this.saveSettings(); this.sfx.click();
+    });
+    $("#set-reset").addEventListener("click", () => {
+      ["quick", "tournament", "practice", "endless"].forEach(m => this.store.set("best_" + m, 0));
+      this.sfx.click(); this.flashMsg("SCORES RESET");
+    });
+    $("#pausebtn").addEventListener("click", () => { this.sfx.click(); this.togglePause(); });
+    $("#btn-resume").addEventListener("click", () => { this.sfx.click(); this.togglePause(); });
+    $("#btn-restart").addEventListener("click", () => { this.sfx.click(); this.startInnings(); });
+    $("#btn-quit").addEventListener("click", () => { this.sfx.click(); this.quitToMenu(); });
+    $("#btn-end-menu").addEventListener("click", () => { this.sfx.click(); this.quitToMenu(); });
+    $("#btn-end-primary").addEventListener("click", () => {
+      this.sfx.click();
+      if (this.modeKey === "tournament") {
+        if (this._endResult === "won" && this.tRound < 5) this.tRound++;
+        else this.tRound = 1;                        // retry from round 1, or restart after the title
+      }
+      this.startInnings();
+    });
+  }
+  bindInput() {
+    // shot buttons: pointerdown for snappy touch response
+    document.querySelectorAll(".shotbtn").forEach(btn =>
+      btn.addEventListener("pointerdown", e => { e.preventDefault(); this.playShot(btn.dataset.shot); }));
+    // keyboard
+    window.addEventListener("keydown", e => {
+      const k = e.key.toLowerCase();
+      if (k === "p" || k === "escape") { this.togglePause(); return; }
+      if (this.state === "menu" || this.state === "paused" || this.state === "inningsEnd") return;
+      if (k === "arrowleft"  || k === "a") { e.preventDefault(); this.playShot("pull"); }
+      if (k === "arrowup"    || k === "w") { e.preventDefault(); this.playShot("loft"); }
+      if (k === "arrowright" || k === "d") { e.preventDefault(); this.playShot("drive"); }
+    });
+    // unlock audio on first interaction anywhere
+    const unlock = () => this.sfx.ensure();
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+  }
+}
+
+/* kick off */
+new Game();
+</script>
+</body>
+</html>
