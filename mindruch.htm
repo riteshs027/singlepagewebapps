@@ -1,0 +1,2518 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#050714">
+  <meta name="description" content="MindRush - a fast-paced competitive brain training game.">
+  <title>MindRush - Train Faster. Think Smarter.</title>
+  <style>
+/*
+ * =========================================================
+ * ROOT, RESET, AND THEME TOKENS
+ * =========================================================
+ */
+:root {
+  color-scheme: dark;
+  --bg: #03040b;
+  --bg2: #081029;
+  --panel: rgba(12,18,43,.72);
+  --panel2: rgba(10,15,36,.9);
+  --soft: rgba(255,255,255,.06);
+  --soft2: rgba(255,255,255,.1);
+  --line: rgba(139,220,255,.18);
+  --line2: rgba(139,220,255,.36);
+  --text: #f7fbff;
+  --muted: #9baccc;
+  --cyan: #26e7ff;
+  --blue: #4c7dff;
+  --purple: #9a5cff;
+  --pink: #ff4fd8;
+  --green: #39f0a7;
+  --yellow: #ffd166;
+  --red: #ff5e7a;
+  --shadow: 0 24px 70px rgba(0,0,0,.42);
+  --r1: 14px;
+  --r2: 20px;
+  --r3: 28px;
+  --ease: cubic-bezier(.2,.8,.2,1);
+  --bounce: cubic-bezier(.2,1.35,.45,1);
+  --safe-top: max(12px,env(safe-area-inset-top));
+  --safe-right: max(12px,env(safe-area-inset-right));
+  --safe-bottom: max(16px,env(safe-area-inset-bottom));
+  --safe-left: max(12px,env(safe-area-inset-left));
+}
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #edf4ff;
+  --bg2: #dce8ff;
+  --panel: rgba(255,255,255,.72);
+  --panel2: rgba(255,255,255,.92);
+  --soft: rgba(18,46,101,.055);
+  --soft2: rgba(18,46,101,.1);
+  --line: rgba(42,75,145,.17);
+  --line2: rgba(42,75,145,.34);
+  --text: #071127;
+  --muted: #53617e;
+  --shadow: 0 24px 70px rgba(35,60,115,.22);
+}
+*,*::before,*::after {
+  box-sizing: border-box;
+}
+html {
+  min-height: 100%;
+  background: var(--bg);
+  scroll-behavior: smooth;
+}
+body {
+  min-width: 320px;
+  min-height: 100dvh;
+  margin: 0;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  background: radial-gradient(circle at 12% 15%,rgba(76,125,255,.2),transparent 28%),
+        radial-gradient(circle at 88% 23%,rgba(255,79,216,.16),transparent 31%),
+        radial-gradient(circle at 48% 92%,rgba(38,231,255,.11),transparent 32%),
+        linear-gradient(160deg,var(--bg),color-mix(in srgb,var(--bg) 70%,var(--bg2)) 48%,var(--bg2));
+  color: var(--text);
+  font-family: Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  text-rendering: optimizeLegibility;
+}
+button,input {
+  font: inherit;
+}
+button {
+  border: 0;
+}
+button,[role="button"] {
+  touch-action: manipulation;
+}
+button:focus-visible,input:focus-visible,[tabindex]:focus-visible {
+  outline: 3px solid rgba(38,231,255,.7);
+  outline-offset: 3px;
+}
+::selection {
+  background: rgba(38,231,255,.28);
+}
+.hidden {
+  display: none !important;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+/*
+ * =========================================================
+ * BACKGROUND AND PARTICLES
+ * =========================================================
+ */
+.bg {
+  position: fixed;
+  inset: 0;
+  z-index: -5;
+  overflow: hidden;
+  pointer-events: none;
+}
+.bg::before {
+  content: "";
+  position: absolute;
+  inset: -45%;
+  background: repeating-linear-gradient(90deg,transparent 0 78px,rgba(38,231,255,.032) 79px 80px),
+        repeating-linear-gradient(0deg,transparent 0 78px,rgba(154,92,255,.028) 79px 80px);
+  transform: perspective(600px) rotateX(62deg) translateY(23%);
+  transform-origin: center bottom;
+  mask-image: linear-gradient(to bottom,transparent 8%,#000 57%,transparent 95%);
+  animation: grid 24s linear infinite;
+}
+.blob {
+  position: absolute;
+  width: 58vw;
+  height: 58vw;
+  min-width: 420px;
+  min-height: 420px;
+  border-radius: 50%;
+  filter: blur(95px);
+  opacity: .17;
+  will-change: transform;
+}
+.b1 {
+  top: -24%;
+  left: -18%;
+  background: var(--blue);
+  animation: blob1 17s var(--ease) infinite alternate;
+}
+.b2 {
+  top: 20%;
+  right: -30%;
+  background: var(--pink);
+  animation: blob2 19s var(--ease) infinite alternate;
+}
+.b3 {
+  bottom: -36%;
+  left: 20%;
+  background: var(--cyan);
+  animation: blob3 21s var(--ease) infinite alternate;
+}
+#particles {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.noise {
+  position: absolute;
+  inset: 0;
+  opacity: .035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.86' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.65'/%3E%3C/svg%3E");
+}
+/*
+ * =========================================================
+ * APP SHELL AND COMMON COMPONENTS
+ * =========================================================
+ */
+.app {
+  position: relative;
+  width: min(100%,1220px);
+  min-height: 100dvh;
+  margin: auto;
+  padding: var(--safe-top) var(--safe-right) calc(92px + var(--safe-bottom)) var(--safe-left);
+}
+.topbar {
+  position: sticky;
+  top: var(--safe-top);
+  z-index: 50;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 8px 9px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: color-mix(in srgb,var(--panel2) 88%,transparent);
+  box-shadow: 0 14px 34px rgba(0,0,0,.24);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+.brand-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 39px;
+  aspect-ratio: 1;
+  border-radius: 13px;
+  background: linear-gradient(135deg,var(--cyan),var(--blue) 48%,var(--pink));
+  color: #02040b;
+  font-weight: 1000;
+  box-shadow: 0 0 24px rgba(38,231,255,.34),inset 0 1px rgba(255,255,255,.42);
+  transform: rotate(-6deg);
+}
+.brand-mark::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1px solid rgba(255,255,255,.55);
+  border-radius: 10px;
+}
+.brand-text {
+  display: none;
+  font-weight: 950;
+  letter-spacing: -.03em;
+}
+.resources {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+}
+.pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 61px;
+  height: 38px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--soft);
+  font-size: .75rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+.pill strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.icon-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 41px;
+  height: 41px;
+  flex: none;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--soft);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform .18s var(--ease),background .18s,border-color .18s,box-shadow .18s;
+}
+.icon-btn:hover {
+  transform: translateY(-2px);
+  background: var(--soft2);
+  border-color: var(--line2);
+  box-shadow: 0 0 24px rgba(38,231,255,.2);
+}
+.icon-btn:active {
+  transform: scale(.94);
+}
+.stack {
+  position: relative;
+  min-height: calc(100dvh - 180px);
+  margin-top: 18px;
+}
+.screen {
+  display: none;
+  min-height: calc(100dvh - 190px);
+  animation: screenIn .42s var(--ease) both;
+}
+.screen.active {
+  display: block;
+}
+.section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 4px 2px 18px;
+}
+.kicker {
+  margin: 0 0 8px;
+  color: var(--cyan);
+  font-size: .74rem;
+  font-weight: 950;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.section-title {
+  margin: 0;
+  font-size: clamp(1.6rem,7vw,2.9rem);
+  line-height: .98;
+  letter-spacing: -.055em;
+}
+.section-copy {
+  max-width: 680px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.glass {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r3);
+  background: linear-gradient(145deg,rgba(255,255,255,.082),rgba(255,255,255,.022)),var(--panel);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(20px) saturate(145%);
+  -webkit-backdrop-filter: blur(20px) saturate(145%);
+}
+.glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg,rgba(255,255,255,.13),transparent 24%,transparent 72%,rgba(38,231,255,.055));
+}
+/*
+ * =========================================================
+ * BUTTONS AND RIPPLE
+ * =========================================================
+ */
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 54px;
+  padding: 0 19px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: var(--soft);
+  color: var(--text);
+  font-weight: 900;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  transition: transform .17s var(--ease),box-shadow .17s,background .17s,border-color .17s,filter .17s;
+}
+.btn:hover {
+  transform: translateY(-3px);
+  background: var(--soft2);
+  border-color: var(--line2);
+  box-shadow: 0 14px 32px rgba(0,0,0,.24);
+}
+.btn:active {
+  transform: translateY(1px) scale(.975);
+}
+.primary {
+  min-height: 61px;
+  border-color: rgba(38,231,255,.55);
+  background: linear-gradient(135deg,var(--cyan),var(--blue) 50%,var(--purple));
+  color: #02040b;
+  box-shadow: 0 17px 40px rgba(76,125,255,.28),0 0 28px rgba(38,231,255,.21);
+}
+.primary:hover {
+  filter: saturate(1.15) brightness(1.06);
+  box-shadow: 0 20px 46px rgba(76,125,255,.36),0 0 36px rgba(38,231,255,.31);
+}
+.pink {
+  border-color: rgba(255,79,216,.42);
+  background: linear-gradient(135deg,rgba(255,79,216,.2),rgba(154,92,255,.16));
+  box-shadow: 0 0 26px rgba(255,79,216,.18);
+}
+.danger {
+  border-color: rgba(255,94,122,.4);
+  background: rgba(255,94,122,.12);
+  color: #ff9aad;
+}
+.small {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 13px;
+  font-size: .86rem;
+}
+.wide {
+  width: 100%;
+}
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  background: rgba(255,255,255,.5);
+  transform: translate(-50%,-50%) scale(0);
+  animation: ripple .62s ease-out forwards;
+}
+/*
+ * =========================================================
+ * HOME SCREEN
+ * =========================================================
+ */
+.home-layout {
+  display: grid;
+  align-items: center;
+  gap: 20px;
+  min-height: calc(100dvh - 210px);
+  padding: 8px 0 18px;
+}
+.hero {
+  padding: clamp(24px,6vw,54px);
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  right: -74px;
+  bottom: -84px;
+  border: 28px solid rgba(38,231,255,.06);
+  border-radius: 50%;
+}
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 19px;
+  padding: 8px 12px;
+  border: 1px solid rgba(38,231,255,.22);
+  border-radius: 999px;
+  background: rgba(38,231,255,.075);
+  color: var(--cyan);
+  font-size: .72rem;
+  font-weight: 950;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 12px var(--green);
+  animation: pulse 1.5s infinite;
+}
+.lockup {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 17px;
+}
+.logo-orb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(72px,20vw,110px);
+  aspect-ratio: 1;
+  flex: none;
+  border-radius: 31%;
+  background: conic-gradient(from 220deg,var(--cyan),var(--blue),var(--purple),var(--pink),var(--cyan));
+  box-shadow: 0 0 48px rgba(38,231,255,.31),0 0 88px rgba(154,92,255,.22);
+  animation: logoFloat 4.6s var(--ease) infinite,logoHue 12s linear infinite;
+}
+.logo-orb::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 28%;
+  background: radial-gradient(circle at 28% 18%,rgba(255,255,255,.2),transparent 32%),#050816;
+  box-shadow: inset 0 0 24px rgba(38,231,255,.15);
+}
+.logo-orb::after {
+  content: "M";
+  position: relative;
+  z-index: 1;
+  color: #fff;
+  font-size: clamp(2.1rem,9vw,4.6rem);
+  font-weight: 1000;
+  font-style: italic;
+  letter-spacing: -.15em;
+  text-shadow: 4px 0 rgba(38,231,255,.42),-4px 0 rgba(255,79,216,.32);
+  transform: translateX(-4%);
+}
+.logo-ring {
+  position: absolute;
+  inset: -12px;
+  border: 1px solid rgba(38,231,255,.24);
+  border-radius: 36%;
+  animation: spin 5s linear infinite;
+}
+.hero-title {
+  margin: 0;
+  background: linear-gradient(100deg,#fff,#a8f5ff 34%,#b9a3ff 66%,#ff9bec);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-size: clamp(3.2rem,15vw,7.5rem);
+  font-weight: 1000;
+  line-height: .82;
+  letter-spacing: -.085em;
+  filter: drop-shadow(0 0 24px rgba(38,231,255,.18));
+}
+.subtitle {
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: clamp(1rem,4.1vw,1.45rem);
+  font-weight: 780;
+}
+.hero-copy {
+  max-width: 650px;
+  margin: 18px 0 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.hero-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 27px;
+}
+.quick-stats {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 9px;
+  margin-top: 22px;
+}
+.quick-stat {
+  padding: 14px 9px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: var(--soft);
+  text-align: center;
+}
+.quick-stat strong {
+  display: block;
+  font-size: clamp(1.05rem,5vw,1.45rem);
+  letter-spacing: -.04em;
+}
+.quick-stat span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: .66rem;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.home-side {
+  display: grid;
+  gap: 14px;
+}
+.mission {
+  padding: 21px;
+}
+.mission-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.mission h3 {
+  margin: 0;
+  font-size: 1.08rem;
+}
+.mission p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.mission-icon {
+  display: grid;
+  place-items: center;
+  width: 50px;
+  aspect-ratio: 1;
+  border-radius: 17px;
+  background: linear-gradient(135deg,rgba(255,209,102,.22),rgba(255,79,216,.14));
+  font-size: 1.4rem;
+}
+.mini-progress {
+  height: 9px;
+  margin-top: 17px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,.07);
+}
+.mini-progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg,var(--cyan),var(--blue),var(--purple));
+  box-shadow: 0 0 18px rgba(38,231,255,.35);
+  transition: width .6s var(--ease);
+}
+.reward-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: .82rem;
+  font-weight: 780;
+}
+.streak {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 19px;
+}
+.flame {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  aspect-ratio: 1;
+  flex: none;
+  border-radius: 21px;
+  background: linear-gradient(145deg,rgba(255,209,102,.28),rgba(255,94,122,.18));
+  font-size: 1.8rem;
+  animation: flame 2.2s var(--ease) infinite;
+}
+.streak strong {
+  display: block;
+  font-size: 1.13rem;
+}
+.streak span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.4;
+}
+/*
+ * =========================================================
+ * MODE SELECT
+ * =========================================================
+ */
+.mode-grid {
+  display: grid;
+  gap: 15px;
+}
+.mode-card {
+  --accent: var(--cyan);
+  position: relative;
+  display: grid;
+  gap: 17px;
+  min-height: 252px;
+  padding: 23px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb,var(--accent) 34%,var(--line));
+  border-radius: 28px;
+  background: linear-gradient(145deg,color-mix(in srgb,var(--accent) 14%,transparent),transparent 45%),var(--panel);
+  box-shadow: var(--shadow),0 0 34px color-mix(in srgb,var(--accent) 10%,transparent);
+  cursor: pointer;
+  transition: transform .22s var(--ease),border-color .22s,box-shadow .22s;
+}
+.mode-card::before {
+  content: "";
+  position: absolute;
+  width: 190px;
+  height: 190px;
+  right: -72px;
+  top: -76px;
+  border: 30px solid color-mix(in srgb,var(--accent) 10%,transparent);
+  border-radius: 50%;
+  transition: transform .3s var(--ease);
+}
+.mode-card:hover {
+  transform: translateY(-7px);
+  border-color: color-mix(in srgb,var(--accent) 62%,var(--line));
+  box-shadow: 0 26px 70px rgba(0,0,0,.36),0 0 42px color-mix(in srgb,var(--accent) 20%,transparent);
+}
+.mode-card:hover::before {
+  transform: rotate(18deg) scale(1.06);
+}
+.mode-card.memory {
+  --accent: var(--purple);
+}
+.mode-card.logic {
+  --accent: var(--pink);
+}
+.mode-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 15px;
+}
+.mode-icon {
+  display: grid;
+  place-items: center;
+  width: 68px;
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in srgb,var(--accent) 28%,transparent);
+  border-radius: 23px;
+  background: color-mix(in srgb,var(--accent) 14%,transparent);
+  box-shadow: 0 0 26px color-mix(in srgb,var(--accent) 18%,transparent);
+  font-size: 2rem;
+}
+.mode-best {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: .74rem;
+  font-weight: 850;
+}
+.mode-card h3 {
+  margin: 0;
+  font-size: 1.43rem;
+  letter-spacing: -.04em;
+}
+.mode-card p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.mode-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: auto;
+}
+.tag {
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 850;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+/*
+ * =========================================================
+ * GAME HUD AND STAGE
+ * =========================================================
+ */
+.game-shell {
+  display: grid;
+  gap: 13px;
+}
+.hud {
+  display: grid;
+  grid-template-columns: repeat(2,1fr);
+  gap: 8px;
+}
+.hud-card {
+  position: relative;
+  min-height: 70px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+  backdrop-filter: blur(16px);
+}
+.hud-label {
+  color: var(--muted);
+  font-size: .65rem;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.hud-value {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-top: 5px;
+  font-size: 1.27rem;
+  font-weight: 950;
+  letter-spacing: -.04em;
+}
+.hud-value small {
+  color: var(--muted);
+  font-size: .66rem;
+  letter-spacing: 0;
+}
+.timer::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 4px;
+  background: linear-gradient(90deg,var(--cyan),var(--blue));
+  transform: scaleX(var(--time,1));
+  transform-origin: left;
+  transition: transform .1s linear;
+}
+.timer.warning {
+  animation: timerPulse .7s infinite;
+}
+.timer.warning::after {
+  background: linear-gradient(90deg,var(--yellow),var(--red));
+}
+.combo .hud-value {
+  color: var(--yellow);
+  text-shadow: 0 0 18px rgba(255,209,102,.3);
+}
+.lives {
+  letter-spacing: .08em;
+}
+.life-off {
+  opacity: .2;
+  filter: grayscale(1);
+}
+.game-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+}
+.stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: min(60dvh,620px);
+  padding: clamp(18px,4vw,34px);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 30px;
+  background: radial-gradient(circle at 50% -10%,rgba(38,231,255,.1),transparent 38%),var(--panel);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(20px) saturate(140%);
+}
+.game-content {
+  position: relative;
+  z-index: 2;
+  width: min(100%,720px);
+  text-align: center;
+}
+.mode-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 16px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: .71rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.question {
+  margin: 0 0 19px;
+  font-size: clamp(2.5rem,13vw,6.8rem);
+  font-weight: 1000;
+  line-height: .95;
+  letter-spacing: -.07em;
+  text-shadow: 0 0 26px rgba(38,231,255,.18),0 0 44px rgba(154,92,255,.12);
+}
+.prompt {
+  margin: 0 auto 19px;
+  color: var(--muted);
+  font-size: .91rem;
+  line-height: 1.55;
+}
+.answers {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 10px;
+}
+.answer {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 74px;
+  padding: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: linear-gradient(145deg,rgba(255,255,255,.07),rgba(255,255,255,.025));
+  color: var(--text);
+  font-size: clamp(1.08rem,5vw,1.58rem);
+  font-weight: 950;
+  cursor: pointer;
+  transition: transform .16s var(--ease),border-color .16s,background .16s,box-shadow .16s;
+}
+.answer:hover {
+  transform: translateY(-3px);
+  border-color: rgba(38,231,255,.42);
+  box-shadow: 0 12px 26px rgba(0,0,0,.22);
+}
+.answer:active {
+  transform: scale(.96);
+}
+.answer.correct {
+  border-color: rgba(57,240,167,.8);
+  background: rgba(57,240,167,.18);
+  box-shadow: 0 0 28px rgba(57,240,167,.28);
+  animation: correct .42s var(--ease);
+}
+.answer.wrong {
+  border-color: rgba(255,94,122,.8);
+  background: rgba(255,94,122,.16);
+  box-shadow: 0 0 28px rgba(255,94,122,.22);
+  animation: wrong .38s var(--ease);
+}
+.progress-box {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+}
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: .71rem;
+  font-weight: 850;
+}
+.progress {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,.06);
+}
+.progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg,var(--cyan),var(--blue),var(--purple),var(--pink));
+  box-shadow: 0 0 20px rgba(38,231,255,.3);
+  transition: width .22s linear;
+}
+.combo-meter {
+  height: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255,255,255,.06);
+}
+.combo-meter span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg,var(--yellow),var(--pink));
+  box-shadow: 0 0 20px rgba(255,79,216,.3);
+  transition: width .3s var(--bounce);
+}
+.score-pop {
+  position: fixed;
+  z-index: 200;
+  pointer-events: none;
+  color: var(--green);
+  font-size: 1.2rem;
+  font-weight: 1000;
+  text-shadow: 0 0 18px currentColor;
+  animation: scorePop .9s var(--ease) forwards;
+}
+/*
+ * =========================================================
+ * MEMORY AND LOGIC GAMES
+ * =========================================================
+ */
+.memory-title {
+  margin: 0 0 19px;
+  font-size: clamp(1.4rem,7vw,2.4rem);
+  font-weight: 950;
+  letter-spacing: -.04em;
+}
+.memory-grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 13px;
+  width: min(100%,470px);
+  margin: auto;
+}
+.memory-tile {
+  position: relative;
+  aspect-ratio: 1.15;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 25px;
+  cursor: pointer;
+  transition: transform .18s var(--ease),filter .18s,box-shadow .18s;
+  box-shadow: inset 0 1px rgba(255,255,255,.3),0 15px 30px rgba(0,0,0,.22);
+}
+.memory-tile::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(255,255,255,.24);
+  border-radius: 18px;
+  opacity: .55;
+}
+.memory-tile:hover {
+  transform: translateY(-4px);
+}
+.memory-tile:active {
+  transform: scale(.94);
+}
+.memory-tile.active {
+  transform: scale(1.06) rotateY(8deg);
+  filter: brightness(1.46) saturate(1.2);
+  box-shadow: 0 0 34px currentColor,inset 0 0 28px rgba(255,255,255,.18);
+}
+.t0 {
+  background: linear-gradient(145deg,#12d8fa,#176bea);
+  color: #12d8fa;
+}
+.t1 {
+  background: linear-gradient(145deg,#8b5cf6,#d946ef);
+  color: #b568ff;
+}
+.t2 {
+  background: linear-gradient(145deg,#ff4d8d,#ff7a45);
+  color: #ff4d8d;
+}
+.t3 {
+  background: linear-gradient(145deg,#36d98b,#11b4a6);
+  color: #36d98b;
+}
+.t4 {
+  background: linear-gradient(145deg,#ffd166,#ff9f1c);
+  color: #ffd166;
+}
+.t5 {
+  background: linear-gradient(145deg,#6fffe9,#3a86ff);
+  color: #6fffe9;
+}
+.memory-round {
+  margin-top: 15px;
+  color: var(--muted);
+  font-size: .76rem;
+  font-weight: 850;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+.logic-title {
+  margin: 0;
+  font-size: clamp(1.5rem,7vw,2.8rem);
+  letter-spacing: -.05em;
+}
+.symbols {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 11px;
+  margin: 20px auto 23px;
+}
+.symbol {
+  display: grid;
+  place-items: center;
+  min-width: 64px;
+  height: 64px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 19px;
+  background: var(--soft);
+  font-size: clamp(1.23rem,6vw,2rem);
+  font-weight: 950;
+  animation: symbol 3s var(--ease) infinite;
+}
+.symbol:nth-child(2n) {
+  animation-delay: -1.2s;
+}
+.symbol:nth-child(3n) {
+  animation-delay: -2.1s;
+}
+.arrow {
+  color: var(--muted);
+  font-weight: 950;
+}
+/*
+ * =========================================================
+ * OVERLAYS, RESULTS, AND DIALOGS
+ * =========================================================
+ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  display: grid;
+  place-items: center;
+  padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+  background: rgba(2,3,10,.72);
+  backdrop-filter: blur(22px) saturate(140%);
+  animation: overlay .22s both;
+}
+.countdown {
+  font-size: clamp(7rem,40vw,19rem);
+  font-weight: 1000;
+  line-height: 1;
+  letter-spacing: -.1em;
+  background: linear-gradient(135deg,var(--cyan),var(--blue),var(--purple),var(--pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 36px rgba(38,231,255,.36)) drop-shadow(0 0 52px rgba(154,92,255,.28));
+  animation: count .82s var(--bounce) both;
+}
+.modal {
+  width: min(100%,520px);
+  max-height: calc(100dvh - 38px);
+  padding: clamp(22px,6vw,34px);
+  overflow-y: auto;
+}
+.modal-icon {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  aspect-ratio: 1;
+  margin: 0 auto 18px;
+  border-radius: 25px;
+  background: linear-gradient(135deg,rgba(38,231,255,.2),rgba(154,92,255,.2),rgba(255,79,216,.2));
+  box-shadow: 0 0 34px rgba(38,231,255,.14),inset 0 1px rgba(255,255,255,.18);
+  font-size: 2.2rem;
+}
+.modal-title {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(1.7rem,8vw,2.6rem);
+  letter-spacing: -.055em;
+}
+.modal-copy {
+  margin: 10px auto 0;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.6;
+}
+.modal-actions {
+  display: grid;
+  gap: 9px;
+  margin-top: 23px;
+}
+.result-score {
+  margin: 19px 0;
+  text-align: center;
+}
+.result-score span {
+  display: block;
+  color: var(--muted);
+  font-size: .73rem;
+  font-weight: 900;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+.result-score strong {
+  display: block;
+  margin-top: 4px;
+  font-size: clamp(3.4rem,17vw,6rem);
+  line-height: .98;
+  letter-spacing: -.08em;
+  background: linear-gradient(120deg,var(--cyan),var(--purple),var(--pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(2,1fr);
+  gap: 8px;
+}
+.result-stat {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--soft);
+  text-align: center;
+}
+.result-stat strong {
+  display: block;
+  font-size: 1.18rem;
+}
+.result-stat span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: .65rem;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.xp-gain {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 15px 0 0;
+  color: var(--cyan);
+  font-size: 1.04rem;
+  font-weight: 950;
+  animation: xp .9s var(--bounce) both;
+}
+/*
+ * =========================================================
+ * DAILY CHALLENGE
+ * =========================================================
+ */
+.daily-layout {
+  display: grid;
+  gap: 15px;
+}
+.daily-hero {
+  padding: clamp(24px,6vw,42px);
+  background: radial-gradient(circle at 88% 10%,rgba(255,209,102,.16),transparent 32%),radial-gradient(circle at 5% 96%,rgba(255,79,216,.13),transparent 34%),var(--panel);
+}
+.daily-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border: 1px solid rgba(255,209,102,.22);
+  border-radius: 999px;
+  background: rgba(255,209,102,.08);
+  color: var(--yellow);
+  font-size: .74rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.daily-title {
+  margin: 18px 0 0;
+  font-size: clamp(2rem,10vw,4rem);
+  line-height: .98;
+  letter-spacing: -.06em;
+}
+.daily-desc {
+  max-width: 620px;
+  margin: 14px 0 0;
+  color: var(--muted);
+  line-height: 1.62;
+}
+.daily-metrics {
+  display: grid;
+  grid-template-columns: repeat(2,1fr);
+  gap: 9px;
+  margin-top: 23px;
+}
+.metric {
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--soft);
+}
+.metric span {
+  display: block;
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.metric strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1.28rem;
+  letter-spacing: -.04em;
+}
+.rewards {
+  padding: 21px;
+}
+.reward-stack {
+  display: grid;
+  gap: 9px;
+  margin-top: 15px;
+}
+.reward {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: var(--soft);
+}
+.reward-left {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.reward-bubble {
+  display: grid;
+  place-items: center;
+  width: 43px;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  background: rgba(255,209,102,.12);
+  font-size: 1.15rem;
+}
+.reward small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+}
+.stamp {
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  margin-top: 18px;
+  border: 2px dashed rgba(57,240,167,.34);
+  border-radius: 24px;
+  background: rgba(57,240,167,.065);
+  color: var(--green);
+  text-align: center;
+  transform: rotate(-1deg);
+}
+.stamp strong {
+  display: block;
+  font-size: 1.4rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.stamp span {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: .85rem;
+}
+/*
+ * =========================================================
+ * LEADERBOARD, ACHIEVEMENTS, STATS
+ * =========================================================
+ */
+.leader-layout {
+  display: grid;
+  gap: 15px;
+}
+.profile {
+  padding: 21px;
+}
+.profile-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 68px;
+  aspect-ratio: 1;
+  flex: none;
+  border-radius: 23px;
+  background: linear-gradient(135deg,var(--cyan),var(--blue),var(--purple));
+  color: #03040c;
+  font-size: 1.55rem;
+  font-weight: 1000;
+  box-shadow: 0 0 25px rgba(38,231,255,.25);
+}
+.profile h3 {
+  margin: 0;
+  font-size: 1.18rem;
+}
+.profile p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: .81rem;
+}
+.name-edit {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-top: 17px;
+}
+.text-input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  outline: 0;
+  background: var(--soft);
+  color: var(--text);
+  transition: border-color .18s,box-shadow .18s;
+}
+.text-input:focus {
+  border-color: rgba(38,231,255,.48);
+  box-shadow: 0 0 0 4px rgba(38,231,255,.08);
+}
+.leader-card {
+  padding: 11px;
+}
+.leader-list {
+  display: grid;
+  gap: 8px;
+}
+.leader-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: var(--soft);
+  transition: transform .18s,border-color .18s,background .18s;
+}
+.leader-row:hover {
+  transform: translateX(4px);
+  border-color: var(--line);
+  background: var(--soft2);
+}
+.leader-row.current {
+  border-color: rgba(38,231,255,.34);
+  background: linear-gradient(90deg,rgba(38,231,255,.1),rgba(154,92,255,.08));
+}
+.rank {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  background: rgba(255,255,255,.06);
+  color: var(--muted);
+  font-weight: 950;
+}
+.leader-row:nth-child(1) .rank {
+  background: rgba(255,209,102,.15);
+  color: var(--yellow);
+}
+.leader-row:nth-child(2) .rank {
+  color: #dce8ff;
+}
+.leader-row:nth-child(3) .rank {
+  color: #ffae7a;
+}
+.leader-name {
+  min-width: 0;
+}
+.leader-name strong {
+  display: block;
+  overflow: hidden;
+  font-size: .92rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.leader-name small,.leader-score small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: .68rem;
+}
+.leader-score {
+  text-align: right;
+}
+.leader-score strong {
+  display: block;
+}
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 11px;
+}
+.badge {
+  position: relative;
+  min-height: 205px;
+  padding: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 23px;
+  background: var(--panel);
+  text-align: center;
+  transition: transform .22s,border-color .22s,filter .22s;
+}
+.badge.unlocked {
+  border-color: rgba(255,209,102,.36);
+  background: radial-gradient(circle at 50% 12%,rgba(255,209,102,.15),transparent 45%),var(--panel);
+  animation: badgeFloat 3.6s var(--ease) infinite;
+}
+.badge.locked {
+  filter: grayscale(.7) saturate(.5);
+  opacity: .6;
+}
+.badge:hover {
+  transform: translateY(-6px) rotate(1deg);
+  border-color: var(--line2);
+}
+.badge-orb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 76px;
+  aspect-ratio: 1;
+  margin: 0 auto 13px;
+  border-radius: 50%;
+  background: linear-gradient(145deg,rgba(255,209,102,.26),rgba(255,79,216,.16),rgba(38,231,255,.16));
+  font-size: 2rem;
+}
+.locked .badge-orb {
+  background: rgba(255,255,255,.07);
+}
+.badge-orb::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed rgba(255,255,255,.2);
+  border-radius: 50%;
+  animation: spin 12s linear infinite;
+}
+.badge h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.badge p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: .74rem;
+  line-height: 1.45;
+}
+.badge-state {
+  display: inline-flex;
+  margin-top: 11px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: .64rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.unlocked .badge-state {
+  background: rgba(57,240,167,.1);
+  color: var(--green);
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 11px;
+}
+.stat {
+  position: relative;
+  min-height: 146px;
+  padding: 18px;
+}
+.stat::after {
+  content: "";
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  right: -28px;
+  bottom: -28px;
+  border-radius: 50%;
+  background: var(--stat,var(--cyan));
+  filter: blur(28px);
+  opacity: .22;
+}
+.stat-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  background: var(--soft);
+  font-size: 1.1rem;
+}
+.stat-value {
+  display: block;
+  margin-top: 15px;
+  font-size: clamp(1.5rem,7vw,2.3rem);
+  line-height: 1;
+  letter-spacing: -.06em;
+}
+.stat-label {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.performance {
+  padding: 21px;
+  margin-top: 15px;
+}
+.perf-row {
+  display: grid;
+  grid-template-columns: minmax(92px,150px) 1fr auto;
+  align-items: center;
+  gap: 11px;
+  margin-top: 14px;
+}
+.perf-label {
+  color: var(--muted);
+  font-size: .79rem;
+  font-weight: 850;
+}
+.perf-bar {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,.06);
+}
+.perf-bar span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg,var(--cyan),var(--purple));
+  transition: width .7s var(--ease);
+}
+.perf-value {
+  min-width: 42px;
+  text-align: right;
+  font-size: .74rem;
+}
+/*
+ * =========================================================
+ * SETTINGS, GUIDE, NAVIGATION, TOASTS
+ * =========================================================
+ */
+.settings-grid,.guide-grid {
+  display: grid;
+  gap: 11px;
+}
+.setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 17px;
+  min-height: 84px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--panel);
+}
+.setting-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.setting-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  aspect-ratio: 1;
+  flex: none;
+  border-radius: 15px;
+  background: var(--soft);
+  font-size: 1.2rem;
+}
+.setting strong {
+  display: block;
+  font-size: .94rem;
+}
+.setting span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: .75rem;
+  line-height: 1.4;
+}
+.switch {
+  position: relative;
+  display: inline-flex;
+  width: 54px;
+  height: 32px;
+  flex: none;
+  cursor: pointer;
+}
+.switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.switch-track {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  transition: background .22s,border-color .22s;
+}
+.switch-track::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 22px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform .22s var(--bounce),background .22s;
+}
+.switch input:checked+.switch-track {
+  border-color: rgba(38,231,255,.45);
+  background: linear-gradient(90deg,rgba(38,231,255,.24),rgba(154,92,255,.25));
+}
+.switch input:checked+.switch-track::after {
+  background: var(--cyan);
+  transform: translateX(22px);
+  box-shadow: 0 0 14px rgba(38,231,255,.46);
+}
+.guide {
+  padding: 19px;
+}
+.guide-step {
+  display: flex;
+  gap: 13px;
+}
+.step-num {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  aspect-ratio: 1;
+  flex: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg,rgba(38,231,255,.18),rgba(154,92,255,.18));
+  color: var(--cyan);
+  font-weight: 950;
+}
+.guide h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.guide p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: .81rem;
+  line-height: 1.55;
+}
+.bottom-nav {
+  position: fixed;
+  z-index: 70;
+  right: var(--safe-right);
+  bottom: var(--safe-bottom);
+  left: var(--safe-left);
+  display: grid;
+  grid-template-columns: repeat(5,1fr);
+  gap: 5px;
+  width: min(calc(100% - var(--safe-left) - var(--safe-right)),620px);
+  min-height: 68px;
+  margin: auto;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 23px;
+  background: color-mix(in srgb,var(--panel2) 90%,transparent);
+  box-shadow: 0 20px 50px rgba(0,0,0,.42);
+  backdrop-filter: blur(24px) saturate(150%);
+}
+.nav-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 7px 4px;
+  overflow: hidden;
+  border-radius: 17px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color .18s,background .18s,transform .18s;
+}
+.nav-btn:hover {
+  color: var(--text);
+  background: var(--soft);
+}
+.nav-btn.active {
+  background: linear-gradient(145deg,rgba(38,231,255,.13),rgba(154,92,255,.11));
+  color: var(--cyan);
+}
+.nav-btn.active::after {
+  content: "";
+  position: absolute;
+  right: 24%;
+  bottom: 3px;
+  left: 24%;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--cyan);
+  box-shadow: 0 0 12px var(--cyan);
+}
+.nav-btn:active {
+  transform: scale(.92);
+}
+.nav-icon {
+  font-size: 1.12rem;
+}
+.nav-label {
+  overflow: hidden;
+  font-size: .57rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.toasts {
+  position: fixed;
+  z-index: 240;
+  top: calc(var(--safe-top) + 70px);
+  right: var(--safe-right);
+  left: var(--safe-left);
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(100%,430px);
+  padding: 13px 15px;
+  border: 1px solid var(--line2);
+  border-radius: 16px;
+  background: var(--panel2);
+  box-shadow: 0 18px 40px rgba(0,0,0,.36),0 0 24px rgba(38,231,255,.18);
+  backdrop-filter: blur(20px);
+  animation: toastIn .32s var(--bounce) both;
+}
+.toast.out {
+  animation: toastOut .26s var(--ease) both;
+}
+.toast-icon {
+  font-size: 1.2rem;
+}
+.toast strong {
+  display: block;
+  font-size: .85rem;
+}
+.toast span {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: .73rem;
+}
+#confetti {
+  position: fixed;
+  inset: 0;
+  z-index: 230;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+  scroll-behavior: auto !important;
+}
+/*
+ * =========================================================
+ * ANIMATIONS
+ * =========================================================
+ */
+@keyframes grid {
+  to {
+    transform: perspective(600px) rotateX(62deg) translateY(23%) translateX(80px);
+  }
+}
+@keyframes blob1 {
+  to {
+    transform: translate3d(28%,14%,0) scale(1.1);
+  }
+}
+@keyframes blob2 {
+  to {
+    transform: translate3d(-22%,22%,0) scale(1.18);
+  }
+}
+@keyframes blob3 {
+  to {
+    transform: translate3d(18%,-18%,0) scale(1.14);
+  }
+}
+@keyframes screenIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(.992);
+    filter: blur(4px);
+  }
+}
+@keyframes logoFloat {
+  50% {
+    transform: translateY(-9px) rotate(3deg);
+  }
+}
+@keyframes logoHue {
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes pulse {
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+@keyframes flame {
+  50% {
+    transform: translateY(-5px) rotate(4deg);
+  }
+}
+@keyframes timerPulse {
+  50% {
+    box-shadow: inset 0 0 24px rgba(255,94,122,.09);
+  }
+}
+@keyframes correct {
+  50% {
+    transform: scale(1.06);
+  }
+}
+@keyframes wrong {
+  25% {
+    transform: translateX(-6px);
+  }
+  50% {
+    transform: translateX(6px);
+  }
+  75% {
+    transform: translateX(-3px);
+  }
+}
+@keyframes scorePop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%,10px) scale(.75);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%,-5px) scale(1.12);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%,-66px) scale(.92);
+  }
+}
+@keyframes symbol {
+  50% {
+    transform: translateY(-5px);
+  }
+}
+@keyframes overlay {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes count {
+  0% {
+    opacity: 0;
+    transform: scale(.35) rotate(-8deg);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1.12) rotate(2deg);
+  }
+  100% {
+    opacity: .96;
+    transform: scale(.92);
+  }
+}
+@keyframes xp {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(.8);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.1);
+  }
+}
+@keyframes badgeFloat {
+  50% {
+    transform: translateY(-4px);
+  }
+}
+@keyframes ripple {
+  to {
+    opacity: 0;
+    transform: translate(-50%,-50%) scale(1);
+  }
+}
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-15px) scale(.94);
+  }
+}
+@keyframes toastOut {
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(.96);
+  }
+}
+/*
+ * =========================================================
+ * RESPONSIVE LAYOUT
+ * =========================================================
+ */
+@media (min-width:560px) {
+  .brand-text {
+    display: inline;
+  }
+  .pill {
+    min-width: 76px;
+    padding: 0 12px;
+    font-size: .81rem;
+  }
+  .hero-actions {
+    grid-template-columns: 1.3fr 1fr;
+  }
+  .hero-actions .primary {
+    grid-row: span 2;
+    min-height: 100%;
+  }
+  .mode-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+  .mode-card:last-child {
+    grid-column: 1/-1;
+  }
+  .hud {
+    grid-template-columns: repeat(4,1fr);
+  }
+  .daily-metrics {
+    grid-template-columns: repeat(4,1fr);
+  }
+  .badge-grid {
+    grid-template-columns: repeat(3,minmax(0,1fr));
+  }
+  .stats-grid {
+    grid-template-columns: repeat(3,minmax(0,1fr));
+  }
+  .settings-grid,.guide-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+  .guide:last-child:nth-child(odd) {
+    grid-column: 1/-1;
+  }
+}
+@media (min-width:840px) {
+  .app {
+    padding-bottom: calc(36px + var(--safe-bottom));
+  }
+  .home-layout {
+    grid-template-columns: minmax(0,1.55fr) minmax(280px,.75fr);
+  }
+  .mode-grid {
+    grid-template-columns: repeat(3,minmax(0,1fr));
+  }
+  .mode-card:last-child {
+    grid-column: auto;
+  }
+  .daily-layout {
+    grid-template-columns: minmax(0,1.55fr) minmax(280px,.65fr);
+  }
+  .leader-layout {
+    grid-template-columns: minmax(270px,.58fr) minmax(0,1.42fr);
+    align-items: start;
+  }
+  .profile {
+    position: sticky;
+    top: 94px;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(4,minmax(0,1fr));
+  }
+  .bottom-nav {
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    left: max(18px,env(safe-area-inset-left));
+    grid-template-columns: 1fr;
+    width: 78px;
+    min-height: 0;
+    transform: translateY(-50%);
+  }
+  .nav-btn {
+    min-height: 58px;
+  }
+  .stack {
+    margin-left: 86px;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+  </style>
+</head>
+<body data-theme="dark">
+  <!-- =========================================================
+       ANIMATED BACKGROUND
+       ========================================================= -->
+  <div class="bg" aria-hidden="true">
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
+    <canvas id="particles"></canvas>
+    <div class="noise"></div>
+  </div>
+  <canvas id="confetti" aria-hidden="true"></canvas>
+
+  <!-- =========================================================
+       APPLICATION SHELL
+       ========================================================= -->
+  <main class="app" id="app">
+    <header class="topbar">
+      <button class="brand ripple-target" id="brandHome" type="button" aria-label="Go home">
+        <span class="brand-mark">M</span>
+        <span class="brand-text">MindRush</span>
+      </button>
+      <div class="resources" aria-label="Player resources">
+        <div class="pill"><span>⚡</span><strong id="topLevel">Lv 1</strong></div>
+        <div class="pill"><span>✦</span><strong id="topXp">0 XP</strong></div>
+        <div class="pill"><span>◉</span><strong id="topCoins">0</strong></div>
+      </div>
+      <button class="icon-btn ripple-target" id="quickSound" type="button" aria-label="Toggle sound">🔊</button>
+    </header>
+
+    <div class="stack">
+      <!-- =====================================================
+           HOME
+           ===================================================== -->
+      <section class="screen active" data-screen="home" id="screen-home">
+        <div class="home-layout">
+          <article class="glass hero">
+            <div class="eyebrow"><span class="dot"></span> Brain arena online</div>
+            <div class="lockup">
+              <div class="logo-orb" aria-hidden="true"><span class="logo-ring"></span></div>
+              <div>
+                <h1 class="hero-title">MindRush</h1>
+                <p class="subtitle">Train Faster. Think Smarter.</p>
+              </div>
+            </div>
+            <p class="hero-copy">Race the clock, build unstoppable combos, and level up your brain across rapid-fire math, memory, and logic challenges.</p>
+            <div class="hero-actions">
+              <button class="btn primary ripple-target" data-nav="modes" type="button">▶ Play</button>
+              <button class="btn pink ripple-target" data-nav="daily" type="button">☀ Daily Challenge</button>
+              <button class="btn ripple-target" data-nav="leaderboard" type="button">🏆 Leaderboard</button>
+              <button class="btn ripple-target" data-nav="how" type="button">? How to Play</button>
+              <button class="btn ripple-target" data-nav="settings" type="button">⚙ Settings</button>
+            </div>
+            <div class="quick-stats">
+              <div class="quick-stat"><strong id="homeBest">0</strong><span>Best Score</span></div>
+              <div class="quick-stat"><strong id="homeGames">0</strong><span>Games</span></div>
+              <div class="quick-stat"><strong id="homeAccuracy">0%</strong><span>Accuracy</span></div>
+            </div>
+          </article>
+          <aside class="home-side">
+            <article class="glass mission">
+              <div class="mission-top">
+                <div><p class="kicker">Today's mission</p><h3 id="homeDailyTitle">Daily challenge</h3><p id="homeDailyCopy"></p></div>
+                <div class="mission-icon">🎯</div>
+              </div>
+              <div class="mini-progress"><span id="homeDailyProgress"></span></div>
+              <div class="reward-row"><span id="homeDailyState">Ready</span><strong>+250 XP</strong></div>
+            </article>
+            <article class="glass streak">
+              <div class="flame">🔥</div>
+              <div><strong><span id="homeStreak">0</span> day streak</strong><span>Play daily to keep your neural momentum alive.</span></div>
+            </article>
+            <article class="glass mission">
+              <div class="mission-top"><div><p class="kicker">Next level</p><h3>Level <span id="homeLevel">1</span></h3></div><div class="mission-icon">⚡</div></div>
+              <div class="mini-progress"><span id="homeLevelProgress"></span></div>
+              <div class="reward-row"><span id="homeXpLabel">0 / 400 XP</span><strong><span id="homeXpLeft">400</span> left</strong></div>
+            </article>
+          </aside>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           GAME MODES
+           ===================================================== -->
+      <section class="screen" data-screen="modes" id="screen-modes">
+        <header class="section-head"><div><p class="kicker">Choose your arena</p><h2 class="section-title">Game Modes</h2><p class="section-copy">Every arena rewards speed, accuracy, and composure. Difficulty rises automatically as your run heats up.</p></div></header>
+        <div class="mode-grid">
+          <article class="mode-card math" data-mode="math" tabindex="0" role="button">
+            <div class="mode-top"><div class="mode-icon">∑</div><div class="mode-best">Best <strong id="mathBest">0</strong></div></div>
+            <div><h3>Mental Math</h3><p>Blitz through addition, subtraction, multiplication, and division in 30 seconds.</p></div>
+            <div class="mode-tags"><span class="tag">30 sec</span><span class="tag">Combo x5</span><span class="tag">Adaptive</span></div>
+            <button class="btn primary wide ripple-target" data-start="math" type="button">Start Math Rush</button>
+          </article>
+          <article class="mode-card memory" data-mode="memory" tabindex="0" role="button">
+            <div class="mode-top"><div class="mode-icon">◈</div><div class="mode-best">Best <strong id="memoryBest">0</strong></div></div>
+            <div><h3>Memory Challenge</h3><p>Watch a glowing tile sequence, then recreate it before your three lives disappear.</p></div>
+            <div class="mode-tags"><span class="tag">3 lives</span><span class="tag">Growing chain</span><span class="tag">Focus</span></div>
+            <button class="btn primary wide ripple-target" data-start="memory" type="button">Start Memory Run</button>
+          </article>
+          <article class="mode-card logic" data-mode="logic" tabindex="0" role="button">
+            <div class="mode-top"><div class="mode-icon">⧉</div><div class="mode-best">Best <strong id="logicBest">0</strong></div></div>
+            <div><h3>Logic Puzzle</h3><p>Spot missing numbers, patterns, and odd-one-out traps against a ruthless countdown.</p></div>
+            <div class="mode-tags"><span class="tag">45 sec</span><span class="tag">Patterns</span><span class="tag">Randomized</span></div>
+            <button class="btn primary wide ripple-target" data-start="logic" type="button">Start Logic Sprint</button>
+          </article>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           GAMEPLAY
+           ===================================================== -->
+      <section class="screen" data-screen="game" id="screen-game">
+        <h2 class="sr-only">Active game</h2>
+        <div class="game-shell">
+          <div class="hud">
+            <div class="hud-card timer" id="timerCard"><span class="hud-label">Time</span><strong class="hud-value"><span id="gameTimer">30.0</span><small>sec</small></strong></div>
+            <div class="hud-card"><span class="hud-label">Score</span><strong class="hud-value"><span id="gameScore">0</span><small>pts</small></strong></div>
+            <div class="hud-card combo"><span class="hud-label">Combo</span><strong class="hud-value"><span id="gameCombo">x1</span><small id="gameStreak">0 streak</small></strong></div>
+            <div class="hud-card"><span class="hud-label">Lives</span><strong class="hud-value lives" id="gameLives">♥ ♥ ♥</strong></div>
+          </div>
+          <div class="game-actions">
+            <button class="icon-btn ripple-target" id="pauseBtn" type="button" aria-label="Pause">⏸</button>
+            <button class="icon-btn ripple-target" id="gameSound" type="button" aria-label="Toggle sound">🔊</button>
+            <button class="icon-btn ripple-target" id="fullBtn" type="button" aria-label="Fullscreen">⛶</button>
+          </div>
+          <div class="stage" id="gameStage"><div class="game-content" id="gameContent"></div></div>
+          <div class="progress-box"><div class="progress-labels"><span>Run progress</span><strong id="progressLabel">0%</strong></div><div class="progress"><span id="progressFill"></span></div></div>
+          <div class="combo-meter"><span id="comboFill"></span></div>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           DAILY CHALLENGE
+           ===================================================== -->
+      <section class="screen" data-screen="daily" id="screen-daily">
+        <header class="section-head"><div><p class="kicker">One shot every day</p><h2 class="section-title">Daily Challenge</h2></div></header>
+        <div class="daily-layout">
+          <article class="glass daily-hero">
+            <div class="daily-date" id="dailyDate">Today</div>
+            <h3 class="daily-title" id="dailyTitle">Daily MindRush</h3>
+            <p class="daily-desc" id="dailyDesc"></p>
+            <div class="daily-metrics">
+              <div class="metric"><span>Mode</span><strong id="dailyMode">Math</strong></div>
+              <div class="metric"><span>Target</span><strong id="dailyTarget">500</strong></div>
+              <div class="metric"><span>Bonus XP</span><strong>250</strong></div>
+              <div class="metric"><span>Coins</span><strong>50</strong></div>
+            </div>
+            <button class="btn primary wide ripple-target" id="dailyStart" type="button" style="margin-top:22px">Start Daily Challenge</button>
+            <div class="stamp hidden" id="dailyStamp"><div><strong>Challenge Cleared</strong><span>Come back tomorrow for a new arena.</span></div></div>
+          </article>
+          <aside class="glass rewards">
+            <p class="kicker">Victory rewards</p><h3 style="margin:0;font-size:1.28rem">Daily cache</h3>
+            <div class="reward-stack">
+              <div class="reward"><div class="reward-left"><div class="reward-bubble">✦</div><div><strong>Bonus XP</strong><small>Level up faster</small></div></div><strong>+250</strong></div>
+              <div class="reward"><div class="reward-left"><div class="reward-bubble">◉</div><div><strong>Mind Coins</strong><small>Permanent profile reward</small></div></div><strong>+50</strong></div>
+              <div class="reward"><div class="reward-left"><div class="reward-bubble">🔥</div><div><strong>Streak</strong><small>Maintain daily momentum</small></div></div><strong>+1 day</strong></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           LEADERBOARD
+           ===================================================== -->
+      <section class="screen" data-screen="leaderboard" id="screen-leaderboard">
+        <header class="section-head"><div><p class="kicker">Local rivals</p><h2 class="section-title">Leaderboard</h2><p class="section-copy">Your best run is ranked against saved local profiles and built-in arcade challengers.</p></div><button class="btn small ripple-target" data-nav="stats" type="button">View Stats</button></header>
+        <div class="leader-layout">
+          <aside class="glass profile">
+            <div class="profile-row"><div class="avatar" id="avatar">P</div><div><h3 id="profileName">Player</h3><p>Level <span id="profileLevel">1</span> neural athlete</p></div></div>
+            <div class="name-edit"><label class="sr-only" for="nameInput">Player name</label><input class="text-input" id="nameInput" maxlength="18" autocomplete="nickname" value="Player"><button class="btn small ripple-target" id="saveName" type="button">Save</button></div>
+            <div class="quick-stats"><div class="quick-stat"><strong id="profileRank">#1</strong><span>Rank</span></div><div class="quick-stat"><strong id="profileGames">0</strong><span>Games</span></div><div class="quick-stat"><strong id="profileAccuracy">0%</strong><span>Accuracy</span></div></div>
+          </aside>
+          <article class="glass leader-card"><div class="leader-list" id="leaderList"></div></article>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           ACHIEVEMENTS
+           ===================================================== -->
+      <section class="screen" data-screen="achievements" id="screen-achievements">
+        <header class="section-head"><div><p class="kicker">Badge collection</p><h2 class="section-title">Achievements</h2><p class="section-copy">Push your speed, score, and consistency to unlock animated neon badges.</p></div></header>
+        <div class="badge-grid" id="badgeGrid"></div>
+      </section>
+
+      <!-- =====================================================
+           STATISTICS
+           ===================================================== -->
+      <section class="screen" data-screen="stats" id="screen-stats">
+        <header class="section-head"><div><p class="kicker">Performance lab</p><h2 class="section-title">Statistics</h2><p class="section-copy">Track consistency, speed, accuracy, and your highest pressure performance.</p></div></header>
+        <div class="stats-grid" id="statsGrid"></div>
+        <article class="glass performance"><p class="kicker">Mode mastery</p><h3 style="margin:0;font-size:1.24rem">Personal bests</h3><div id="performanceRows"></div></article>
+      </section>
+
+      <!-- =====================================================
+           HOW TO PLAY
+           ===================================================== -->
+      <section class="screen" data-screen="how" id="screen-how">
+        <header class="section-head"><div><p class="kicker">Rules of the rush</p><h2 class="section-title">How to Play</h2><p class="section-copy">Every correct answer builds momentum. Stay accurate, move quickly, and protect your combo.</p></div></header>
+        <div class="guide-grid">
+          <article class="glass guide"><div class="guide-step"><div class="step-num">1</div><div><h3>Choose a mode</h3><p>Pick Mental Math, Memory Challenge, or Logic Puzzle from the Play screen.</p></div></div></article>
+          <article class="glass guide"><div class="guide-step"><div class="step-num">2</div><div><h3>Beat the clock</h3><p>Solve as many challenges as possible before time expires or your lives run out.</p></div></div></article>
+          <article class="glass guide"><div class="guide-step"><div class="step-num">3</div><div><h3>Build combos</h3><p>Consecutive correct answers raise your score multiplier up to x5.</p></div></div></article>
+          <article class="glass guide"><div class="guide-step"><div class="step-num">4</div><div><h3>Level up</h3><p>Earn XP and coins after each run. Level-ups trigger bonus rewards and confetti.</p></div></div></article>
+          <article class="glass guide"><div class="guide-step"><div class="step-num">5</div><div><h3>Complete dailies</h3><p>A deterministic challenge appears each day with 250 bonus XP and 50 coins.</p></div></div></article>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           SETTINGS
+           ===================================================== -->
+      <section class="screen" data-screen="settings" id="screen-settings">
+        <header class="section-head"><div><p class="kicker">Tune your arena</p><h2 class="section-title">Settings</h2><p class="section-copy">Customize theme, sound, motion, and stored progress.</p></div></header>
+        <div class="settings-grid">
+          <div class="setting"><div class="setting-left"><div class="setting-icon">☾</div><div><strong>Dark Mode</strong><span>Use the midnight cyberpunk theme.</span></div></div><label class="switch"><input id="darkToggle" type="checkbox" checked><span class="switch-track"></span></label></div>
+          <div class="setting"><div class="setting-left"><div class="setting-icon">🔊</div><div><strong>Sound</strong><span>Enable generated Web Audio effects.</span></div></div><label class="switch"><input id="soundToggle" type="checkbox" checked><span class="switch-track"></span></label></div>
+          <div class="setting"><div class="setting-left"><div class="setting-icon">✦</div><div><strong>Animations</strong><span>Enable particles, transitions, and effects.</span></div></div><label class="switch"><input id="animToggle" type="checkbox" checked><span class="switch-track"></span></label></div>
+          <div class="setting"><div class="setting-left"><div class="setting-icon">⛶</div><div><strong>Fullscreen</strong><span>Enter an immersive game view when supported.</span></div></div><button class="btn small ripple-target" id="settingsFull" type="button">Toggle</button></div>
+          <div class="setting"><div class="setting-left"><div class="setting-icon">⟳</div><div><strong>Reset Progress</strong><span>Delete scores, XP, coins, badges, and stats.</span></div></div><button class="btn danger small ripple-target" id="resetBtn" type="button">Reset</button></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- =========================================================
+         MOBILE / DESKTOP NAVIGATION
+         ========================================================= -->
+    <nav class="bottom-nav" aria-label="Main navigation">
+      <button class="nav-btn active ripple-target" data-nav="home" type="button"><span class="nav-icon">⌂</span><span class="nav-label">Home</span></button>
+      <button class="nav-btn ripple-target" data-nav="modes" type="button"><span class="nav-icon">▶</span><span class="nav-label">Play</span></button>
+      <button class="nav-btn ripple-target" data-nav="daily" type="button"><span class="nav-icon">☀</span><span class="nav-label">Daily</span></button>
+      <button class="nav-btn ripple-target" data-nav="leaderboard" type="button"><span class="nav-icon">🏆</span><span class="nav-label">Ranks</span></button>
+      <button class="nav-btn ripple-target" data-nav="achievements" type="button"><span class="nav-icon">✪</span><span class="nav-label">Badges</span></button>
+    </nav>
+  </main>
+
+  <!-- =========================================================
+       OVERLAYS
+       ========================================================= -->
+  <div class="overlay hidden" id="countOverlay" aria-live="assertive"><div class="countdown" id="countNumber">3</div></div>
+  <div class="overlay hidden" id="pauseOverlay" role="dialog" aria-modal="true">
+    <article class="glass modal"><div class="modal-icon">⏸</div><h2 class="modal-title">Game Paused</h2><p class="modal-copy">Take a breath. Your timer is frozen until you return.</p><div class="modal-actions"><button class="btn primary wide ripple-target" id="resumeBtn" type="button">Resume</button><button class="btn wide ripple-target" id="restartBtn" type="button">Restart</button><button class="btn danger wide ripple-target" id="quitBtn" type="button">Quit to Modes</button></div></article>
+  </div>
+  <div class="overlay hidden" id="resultOverlay" role="dialog" aria-modal="true">
+    <article class="glass modal"><div class="modal-icon" id="resultIcon">🏆</div><h2 class="modal-title" id="resultTitle">Rush Complete</h2><p class="modal-copy" id="resultCopy"></p><div class="result-score"><span>Final score</span><strong id="resultScore">0</strong></div><div class="result-grid"><div class="result-stat"><strong id="resultAccuracy">0%</strong><span>Accuracy</span></div><div class="result-stat"><strong id="resultCombo">0</strong><span>Best Combo</span></div><div class="result-stat"><strong id="resultSolved">0</strong><span>Solved</span></div><div class="result-stat"><strong id="resultReaction">0.00s</strong><span>Avg Reaction</span></div></div><div class="xp-gain" id="resultXp">+0 XP</div><div class="modal-actions"><button class="btn primary wide ripple-target" id="againBtn" type="button">Play Again</button><button class="btn wide ripple-target" id="modesBtn" type="button">Choose Mode</button><button class="btn wide ripple-target" id="homeBtn" type="button">Home</button></div></article>
+  </div>
+  <div class="overlay hidden" id="resetOverlay" role="dialog" aria-modal="true">
+    <article class="glass modal"><div class="modal-icon">⚠</div><h2 class="modal-title">Reset Progress?</h2><p class="modal-copy">This permanently removes local scores, levels, coins, achievements, and game statistics.</p><div class="modal-actions"><button class="btn danger wide ripple-target" id="confirmReset" type="button">Delete Everything</button><button class="btn wide ripple-target" id="cancelReset" type="button">Cancel</button></div></article>
+  </div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script>
+    "use strict";
+
+    /* =========================================================
+       CORE UTILITIES AND DATA
+       ========================================================= */
+    const KEY="mindrush.save.v1";
+    const $=(s,p=document)=>p.querySelector(s);
+    const $$=(s,p=document)=>[...p.querySelectorAll(s)];
+    const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
+    const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+    const shuffle=a=>{const x=[...a];for(let i=x.length-1;i>0;i--){const j=rand(0,i);[x[i],x[j]]=[x[j],x[i]]}return x};
+    const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+    const num=n=>new Intl.NumberFormat("en-US").format(Math.max(0,Math.round(n)));
+    const pct=n=>`${Math.round(clamp(n,0,100))}%`;
+    const dateKey=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    const dayDiff=(a,b)=>Math.round(Math.abs(new Date(`${b}T12:00:00`)-new Date(`${a}T12:00:00`))/86400000);
+    const seeded=text=>{let s=2166136261;for(const c of text){s^=c.charCodeAt(0);s=Math.imul(s,16777619)}return()=>{s+=0x6D2B79F5;let t=s;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}};
+    const defaults=()=>({
+      version:1,
+      profile:{name:"Player",xp:0,level:1,coins:0,streak:0,lastPlayed:""},
+      settings:{dark:true,sound:true,animations:true},
+      scores:{high:0,math:0,memory:0,logic:0},
+      stats:{games:0,wins:0,losses:0,correct:0,wrong:0,totalReaction:0,reactions:0,highestCombo:0,fastest:0,totalScore:0},
+      achievements:[],
+      daily:{completed:"",best:0},
+      leaderboard:[]
+    });
+    const mergeSave=s=>{const d=defaults();return{...d,...s,profile:{...d.profile,...s?.profile},settings:{...d.settings,...s?.settings},scores:{...d.scores,...s?.scores},stats:{...d.stats,...s?.stats},daily:{...d.daily,...s?.daily},achievements:Array.isArray(s?.achievements)?s.achievements:[],leaderboard:Array.isArray(s?.leaderboard)?s.leaderboard:[]}};
+
+    const ACHIEVEMENTS=[
+      {id:"fast",name:"Fast Thinker",icon:"⚡",desc:"Solve any challenge in under 1.5 seconds.",check:s=>s.stats.fastest>0&&s.stats.fastest<=1500},
+      {id:"math",name:"Math Master",icon:"∑",desc:"Score 800 or more in Mental Math.",check:s=>s.scores.math>=800},
+      {id:"memory",name:"Memory King",icon:"◈",desc:"Score 800 or more in Memory Challenge.",check:s=>s.scores.memory>=800},
+      {id:"logic",name:"Puzzle Genius",icon:"⧉",desc:"Score 800 or more in Logic Puzzle.",check:s=>s.scores.logic>=800},
+      {id:"combo",name:"Combo Hero",icon:"🔥",desc:"Reach a 15-answer combo.",check:s=>s.stats.highestCombo>=15},
+      {id:"club",name:"1000 Points Club",icon:"✦",desc:"Score at least 1,000 points in one run.",check:s=>s.scores.high>=1000}
+    ];
+
+    const dailyChallenge=(key=dateKey())=>{
+      const r=seeded(`mindrush-${key}`),modes=["math","memory","logic"],mode=modes[Math.floor(r()*modes.length)];
+      const names={math:"Mental Math",memory:"Memory Challenge",logic:"Logic Puzzle"};
+      const targets={math:520,memory:430,logic:500};
+      const desc={math:"Solve adaptive arithmetic questions and hit the target before time expires.",memory:"Climb a glowing sequence ladder while protecting all three lives.",logic:"Decode number patterns and odd-one-out traps under a compressed timer."};
+      return{key,mode,name:names[mode],title:`${names[mode]} Blitz`,target:targets[mode]+Math.floor(r()*5)*25,desc:desc[mode],xp:250,coins:50};
+    };
+
+    /* =========================================================
+       WEB AUDIO EFFECTS
+       ========================================================= */
+    class AudioEngine{
+      constructor(){this.ctx=null;this.enabled=true}
+      set(v){this.enabled=!!v}
+      get(){if(!this.enabled)return null;if(!this.ctx){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;this.ctx=new C()}if(this.ctx.state==="suspended")this.ctx.resume().catch(()=>{});return this.ctx}
+      tone({f=440,d=.1,type="sine",v=.07,to=null,delay=0}={}){const c=this.get();if(!c)return;const t=c.currentTime+delay,e=t+d,o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(Math.max(1,to),e);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0001,v),t+.012);g.gain.exponentialRampToValueAtTime(.0001,e);o.connect(g);g.connect(c.destination);o.start(t);o.stop(e+.02)}
+      click(){this.tone({f:240,d:.045,type:"square",v:.03,to:300})}
+      correct(){this.tone({f:560,d:.09,v:.075,to:760});this.tone({f:820,d:.1,type:"triangle",v:.05,delay:.06,to:1040})}
+      wrong(){this.tone({f:210,d:.16,type:"sawtooth",v:.05,to:105})}
+      level(){[440,554,659,880].forEach((f,i)=>this.tone({f,d:.18,type:"triangle",v:.06,delay:i*.085,to:f*1.08}))}
+      victory(){[523,659,784,1046].forEach((f,i)=>this.tone({f,d:.22,v:.06,delay:i*.09,to:f*1.04}))}
+    }
+
+    /* =========================================================
+       PARTICLES AND CONFETTI
+       ========================================================= */
+    class Particles{
+      constructor(canvas){this.c=canvas;this.x=canvas.getContext("2d");this.items=[];this.on=true;this.frame=0;this.last=0;this.loop=this.loop.bind(this);addEventListener("resize",()=>this.resize(),{passive:true});this.resize();this.frame=requestAnimationFrame(this.loop)}
+      make(randomY=true){return{x:Math.random()*innerWidth,y:randomY?Math.random()*innerHeight:innerHeight+rand(0,80),r:Math.random()*1.8+.35,s:Math.random()*.16+.05,d:Math.random()*.14-.07,a:Math.random()*.5+.18,h:[188,220,270,318][rand(0,3)]}}
+      resize(){const p=Math.min(devicePixelRatio||1,2);this.c.width=innerWidth*p;this.c.height=innerHeight*p;this.c.style.width=`${innerWidth}px`;this.c.style.height=`${innerHeight}px`;this.x.setTransform(p,0,0,p,0,0);this.items=Array.from({length:clamp(Math.round(innerWidth*innerHeight/24000),24,70)},()=>this.make())}
+      set(v){this.on=!!v;if(this.on&&!this.frame){this.last=0;this.frame=requestAnimationFrame(this.loop)}if(!this.on){cancelAnimationFrame(this.frame);this.frame=0;this.x.clearRect(0,0,innerWidth,innerHeight)}}
+      loop(t){if(!this.on){this.frame=0;return}const dt=Math.min(2.2,(t-(this.last||t))/16.67);this.last=t;this.x.clearRect(0,0,innerWidth,innerHeight);for(const p of this.items){p.y-=p.s*dt;p.x+=p.d*dt;if(p.y<-10||p.x<-10||p.x>innerWidth+10)Object.assign(p,this.make(false));this.x.beginPath();this.x.fillStyle=`hsla(${p.h},96%,70%,${p.a})`;this.x.shadowBlur=p.r*7;this.x.shadowColor=`hsla(${p.h},96%,70%,.4)`;this.x.arc(p.x,p.y,p.r,0,Math.PI*2);this.x.fill()}this.x.shadowBlur=0;this.frame=requestAnimationFrame(this.loop)}
+    }
+    class Confetti{
+      constructor(canvas){this.c=canvas;this.x=canvas.getContext("2d");this.items=[];this.frame=0;this.last=0;this.loop=this.loop.bind(this);addEventListener("resize",()=>this.resize(),{passive:true});this.resize()}
+      resize(){const p=Math.min(devicePixelRatio||1,2);this.c.width=innerWidth*p;this.c.height=innerHeight*p;this.c.style.width=`${innerWidth}px`;this.c.style.height=`${innerHeight}px`;this.x.setTransform(p,0,0,p,0,0)}
+      burst(count=110){const colors=["#26e7ff","#4c7dff","#9a5cff","#ff4fd8","#ffd166","#39f0a7"];for(let i=0;i<count;i++){const a=Math.random()*Math.PI*2,v=Math.random()*7+4;this.items.push({x:innerWidth/2,y:innerHeight*.34,vx:Math.cos(a)*v,vy:Math.sin(a)*v-Math.random()*5,g:.12+Math.random()*.08,w:rand(5,10),h:rand(3,7),r:Math.random()*Math.PI,s:Math.random()*.22-.11,c:colors[rand(0,colors.length-1)],life:90+rand(0,50)})}if(!this.frame){this.last=0;this.frame=requestAnimationFrame(this.loop)}}
+      loop(t){const dt=Math.min(2,(t-(this.last||t))/16.67);this.last=t;this.x.clearRect(0,0,innerWidth,innerHeight);this.items=this.items.filter(p=>{p.vx*=.992;p.vy=p.vy*.992+p.g*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.r+=p.s*dt;p.life-=dt;this.x.save();this.x.translate(p.x,p.y);this.x.rotate(p.r);this.x.fillStyle=p.c;this.x.fillRect(-p.w/2,-p.h/2,p.w,p.h);this.x.restore();return p.life>0&&p.y<innerHeight+30});if(this.items.length)this.frame=requestAnimationFrame(this.loop);else{this.frame=0;this.x.clearRect(0,0,innerWidth,innerHeight)}}
+    }
+
+    /* =========================================================
+       GAME ENGINE
+       ========================================================= */
+    class Game{
+      constructor(app){this.app=app;this.mode="math";this.lastMode="math";this.daily=false;this.target=0;this.running=false;this.paused=false;this.score=0;this.combo=0;this.bestCombo=0;this.correct=0;this.wrong=0;this.lives=3;this.duration=30;this.time=30;this.last=0;this.frame=0;this.lock=false;this.questionAt=0;this.reactions=[];this.fastest=0;this.answer=null;this.memorySeq=[];this.memoryInput=[];this.memoryRound=0;this.memoryAccept=false;this.memoryToken=0;this.tick=this.tick.bind(this)}
+      get mult(){return clamp(1+Math.floor(this.combo/4),1,5)}
+      async start(mode,opt={}){if(!["math","memory","logic"].includes(mode))return;this.cancel();this.mode=this.lastMode=mode;this.daily=!!opt.daily;this.target=Number(opt.target||0);this.score=0;this.combo=0;this.bestCombo=0;this.correct=0;this.wrong=0;this.lives=3;this.duration=mode==="math"?30:mode==="logic"?45:60;this.time=this.duration;this.reactions=[];this.fastest=0;this.lock=false;this.memorySeq=[];this.memoryInput=[];this.memoryRound=0;this.memoryAccept=false;this.memoryToken++;this.running=true;this.app.show("game");this.renderReady();this.update();await this.app.countdown();if(!this.running)return;this.last=performance.now();if(mode==="math")this.nextMath();else if(mode==="memory")this.nextMemory();else this.nextLogic();this.frame=requestAnimationFrame(this.tick)}
+      renderReady(){this.app.el.gameContent.innerHTML=`<div class="mode-label">${this.daily?"☀ Daily • ":""}${this.label()}</div><h3 class="question">Get Ready</h3><p class="prompt">Focus your attention. The rush begins after the countdown.</p>`}
+      label(){return{math:"Mental Math",memory:"Memory Challenge",logic:"Logic Puzzle"}[this.mode]}
+      tick(now){if(!this.running||this.paused)return;const dt=Math.min(100,now-this.last);this.last=now;this.time-=dt/1000;if(this.time<=0){this.time=0;this.update();this.end("time");return}this.updateTimer();this.frame=requestAnimationFrame(this.tick)}
+      updateTimer(){const scale=Math.max(0,this.time)/this.duration;this.app.el.gameTimer.textContent=Math.max(0,this.time).toFixed(1);this.app.el.timerCard.style.setProperty("--time",scale);this.app.el.timerCard.classList.toggle("warning",this.time<=8);const p=this.daily&&this.target?clamp(this.score/this.target*100,0,100):clamp((this.duration-this.time)/this.duration*100,0,100);this.app.el.progressFill.style.width=`${p}%`;this.app.el.progressLabel.textContent=`${Math.round(p)}%`}
+      update(){this.app.el.gameScore.textContent=num(this.score);this.app.el.gameCombo.textContent=`x${this.mult}`;this.app.el.gameStreak.textContent=`${this.combo} streak`;this.app.el.gameLives.innerHTML=[0,1,2].map(i=>`<span class="${i<this.lives?"":"life-off"}">♥</span>`).join(" ");this.app.el.comboFill.style.width=`${this.combo?this.combo%4/4*100:0}%`;this.updateTimer()}
+      register(ok,node){if(this.lock||!this.running||this.paused)return false;this.lock=true;const rt=Math.max(0,performance.now()-this.questionAt);this.reactions.push(rt);this.fastest=this.fastest===0?rt:Math.min(this.fastest,rt);if(ok){this.correct++;this.combo++;this.bestCombo=Math.max(this.bestCombo,this.combo);const speed=Math.max(0,Math.round(40-rt/80)),base=this.mode==="memory"?70+this.memoryRound*8:65+Math.floor((this.correct+this.wrong)*1.8),points=(base+speed)*this.mult;this.score+=points;node?.classList.add("correct");this.app.audio.correct();this.app.scorePop(`+${points}`,node,true)}else{this.wrong++;this.combo=0;if(this.mode==="memory")this.lives=Math.max(0,this.lives-1);else this.score=Math.max(0,this.score-25);node?.classList.add("wrong");this.app.audio.wrong();this.app.scorePop(this.mode==="memory"?"-1 life":"-25",node,false)}this.update();if(this.daily&&this.score>=this.target)setTimeout(()=>this.end("daily"),480);return true}
+      choices(answer){const set=new Set([answer]),mag=Math.max(2,Math.round(Math.abs(answer)*.14));let guard=0;while(set.size<4&&guard++<30){const d=rand(-mag-3,mag+3);if(d)set.add(Math.max(0,answer+d))}while(set.size<4)set.add(answer+set.size+1);return shuffle([...set])}
+      nextMath(){if(!this.running)return;this.lock=false;const difficulty=1+Math.floor(this.correct/4),ops=["+","-"];if(difficulty>=2)ops.push("×");if(difficulty>=3)ops.push("÷");const op=ops[rand(0,ops.length-1)],scale=clamp(10+difficulty*8,18,120);let a,b,ans;if(op==="+"){a=rand(4,scale);b=rand(3,scale);ans=a+b}else if(op==="-"){a=rand(8,scale+15);b=rand(2,a);ans=a-b}else if(op==="×"){a=rand(2,clamp(5+difficulty,6,15));b=rand(2,clamp(7+difficulty,8,16));ans=a*b}else{b=rand(2,clamp(4+difficulty,5,13));ans=rand(2,clamp(5+difficulty,6,15));a=b*ans}this.answer=ans;this.app.el.gameContent.innerHTML=`<div class="mode-label">${this.daily?"☀ Daily • ":""}Mental Math • Difficulty ${difficulty}</div><h3 class="question">${a} ${op} ${b}</h3><p class="prompt">Choose the correct answer. Faster solves earn a speed bonus.</p><div class="answers">${this.choices(ans).map(x=>`<button class="answer" data-answer="${x}" type="button">${x}</button>`).join("")}</div>`;$$('.answer',this.app.el.gameContent).forEach(btn=>btn.onclick=()=>{const ok=Number(btn.dataset.answer)===this.answer;if(!this.register(ok,btn))return;if(!ok)$(`[data-answer="${this.answer}"]`,this.app.el.gameContent)?.classList.add("correct");setTimeout(()=>this.nextMath(),ok?260:520)});this.questionAt=performance.now()}
+      async nextMemory(){if(!this.running)return;this.lock=false;this.memoryAccept=false;this.memoryInput=[];this.memoryRound++;const count=this.memoryRound>=7?6:this.memoryRound>=4?5:4;if(!this.memorySeq.length)this.memorySeq.push(rand(0,count-1),rand(0,count-1),rand(0,count-1));else this.memorySeq.push(rand(0,count-1));this.renderMemory(count,"Watch the sequence");const token=++this.memoryToken,pace=clamp(670-this.memoryRound*34,270,670);await sleep(650);for(const index of this.memorySeq){if(token!==this.memoryToken||!this.running)return;const tile=$(`[data-tile="${index}"]`,this.app.el.gameContent);tile?.classList.add("active");this.app.audio.tone({f:320+index*90,d:.1,v:.04,to:360+index*96});await sleep(Math.round(pace*.58));tile?.classList.remove("active");await sleep(Math.round(pace*.25))}if(token!==this.memoryToken||!this.running)return;$(".memory-title",this.app.el.gameContent).textContent="Repeat it";this.memoryAccept=true;this.questionAt=performance.now()}
+      renderMemory(count,title){this.app.el.gameContent.innerHTML=`<div class="mode-label">${this.daily?"☀ Daily • ":""}Memory Challenge</div><h3 class="memory-title">${title}</h3><div class="memory-grid">${Array.from({length:count},(_,i)=>`<button class="memory-tile t${i}" data-tile="${i}" type="button" aria-label="Memory tile ${i+1}"></button>`).join("")}</div><div class="memory-round">Round ${this.memoryRound} • Sequence ${this.memorySeq.length}</div>`;$$('.memory-tile',this.app.el.gameContent).forEach(tile=>tile.onpointerdown=()=>this.memoryTap(Number(tile.dataset.tile),tile))}
+      async memoryTap(index,tile){if(!this.memoryAccept||!this.running||this.paused)return;tile.classList.add("active");setTimeout(()=>tile.classList.remove("active"),160);const expected=this.memorySeq[this.memoryInput.length];this.memoryInput.push(index);if(index!==expected){this.memoryAccept=false;this.lock=false;this.register(false,tile);if(this.lives<=0){setTimeout(()=>this.end("lives"),480);return}$(".memory-title",this.app.el.gameContent).textContent="Sequence missed";await sleep(650);this.memoryRound=Math.max(0,this.memoryRound-1);this.memorySeq=this.memorySeq.slice(0,Math.max(2,this.memorySeq.length-1));this.nextMemory();return}this.app.audio.tone({f:390+index*82,d:.08,type:"triangle",v:.035,to:440+index*90});if(this.memoryInput.length===this.memorySeq.length){this.memoryAccept=false;this.lock=false;this.register(true,tile);$(".memory-title",this.app.el.gameContent).textContent="Perfect sequence";await sleep(600);this.nextMemory()}}
+      nextLogic(){if(!this.running)return;this.lock=false;const difficulty=1+Math.floor(this.correct/3),gens=[()=>this.missing(difficulty),()=>this.odd(difficulty),()=>this.pattern(difficulty)],p=gens[rand(0,gens.length-1)]();this.answer=p.answer;this.app.el.gameContent.innerHTML=`<div class="mode-label">${this.daily?"☀ Daily • ":""}Logic Puzzle • Difficulty ${difficulty}</div><h3 class="logic-title">${p.title}</h3><div class="symbols">${p.display.map(x=>`<div class="symbol">${x}</div>`).join('<span class="arrow">›</span>')}</div><p class="prompt">${p.prompt}</p><div class="answers">${p.choices.map(x=>`<button class="answer" data-answer="${x}" type="button">${x}</button>`).join("")}</div>`;$$('.answer',this.app.el.gameContent).forEach(btn=>btn.onclick=()=>{const ok=btn.dataset.answer===String(this.answer);if(!this.register(ok,btn))return;if(!ok)$$('.answer',this.app.el.gameContent).find(x=>x.dataset.answer===String(this.answer))?.classList.add("correct");setTimeout(()=>this.nextLogic(),ok?300:560)});this.questionAt=performance.now()}
+      missing(d){const start=rand(1,8+d),step=rand(2,clamp(3+d,3,9)),len=d>=4?6:5,seq=Array.from({length:len},(_,i)=>start+i*step),i=rand(1,len-2),answer=seq[i];return{title:"Missing Number",prompt:"Find the value that completes the sequence.",display:seq.map((x,n)=>n===i?"?":x),answer,choices:this.choices(answer)}}
+      odd(d){const m=rand(2,clamp(3+d,3,7)),base=rand(2,8),values=Array.from({length:5},(_,i)=>(base+i)*m),i=rand(0,4),answer=values[i]+rand(1,Math.max(2,m-1));values[i]=answer;return{title:"Odd One Out",prompt:`Four numbers are divisible by ${m}. Which one is not?`,display:values,answer,choices:shuffle(values)}}
+      pattern(d){const start=rand(1,6),count=d>=4?6:5,seq=[start];for(let i=1;i<count;i++)seq.push(i%2?seq[i-1]*2:seq[i-1]+d+1);const answer=count%2?seq[count-1]*2:seq[count-1]+d+1;return{title:"Pattern Prediction",prompt:"The rule alternates between two operations. What comes next?",display:[...seq,"?"],answer,choices:this.choices(answer)}}
+      pause(){if(!this.running||this.paused)return;this.paused=true;this.memoryToken++;cancelAnimationFrame(this.frame);this.app.el.pauseOverlay.classList.remove("hidden")}
+      resume(){if(!this.running||!this.paused)return;this.paused=false;this.last=performance.now();this.app.el.pauseOverlay.classList.add("hidden");if(this.mode==="memory"){this.memoryRound=Math.max(0,this.memoryRound-1);this.memorySeq.pop();this.nextMemory()}this.frame=requestAnimationFrame(this.tick)}
+      restart(){const m=this.mode,d=this.daily,t=this.target;this.app.el.pauseOverlay.classList.add("hidden");this.start(m,{daily:d,target:t})}
+      cancel(){this.running=false;this.paused=false;this.memoryAccept=false;this.memoryToken++;cancelAnimationFrame(this.frame);this.frame=0;this.app?.el?.pauseOverlay?.classList.add("hidden")}
+      end(reason){if(!this.running)return;this.running=false;this.paused=false;this.memoryAccept=false;this.memoryToken++;cancelAnimationFrame(this.frame);const dailyWin=this.daily&&this.score>=this.target,won=reason==="daily"||dailyWin||this.score>=450;this.app.complete({mode:this.mode,daily:this.daily,dailyWin,score:this.score,correct:this.correct,wrong:this.wrong,bestCombo:this.bestCombo,reactions:[...this.reactions],fastest:this.fastest,won,reason})}
+    }
+
+    /* =========================================================
+       MAIN APPLICATION CONTROLLER
+       ========================================================= */
+    class App{
+      constructor(){let raw=null;try{raw=JSON.parse(localStorage.getItem(KEY)||"null")}catch{}this.save=mergeSave(raw);this.audio=new AudioEngine();this.particles=new Particles($("#particles"));this.confetti=new Confetti($("#confetti"));this.daily=dailyChallenge();this.current="home";this.swipe=null;this.el=this.collect();this.game=new Game(this);this.bind();this.updateStreak();this.checkAchievements(false);this.applySettings();this.render()}
+      collect(){return{screens:$$('.screen'),nav:$$('.nav-btn'),topLevel:$("#topLevel"),topXp:$("#topXp"),topCoins:$("#topCoins"),quickSound:$("#quickSound"),gameSound:$("#gameSound"),homeBest:$("#homeBest"),homeGames:$("#homeGames"),homeAccuracy:$("#homeAccuracy"),homeStreak:$("#homeStreak"),homeLevel:$("#homeLevel"),homeLevelProgress:$("#homeLevelProgress"),homeXpLabel:$("#homeXpLabel"),homeXpLeft:$("#homeXpLeft"),homeDailyTitle:$("#homeDailyTitle"),homeDailyCopy:$("#homeDailyCopy"),homeDailyProgress:$("#homeDailyProgress"),homeDailyState:$("#homeDailyState"),mathBest:$("#mathBest"),memoryBest:$("#memoryBest"),logicBest:$("#logicBest"),gameContent:$("#gameContent"),gameTimer:$("#gameTimer"),gameScore:$("#gameScore"),gameCombo:$("#gameCombo"),gameStreak:$("#gameStreak"),gameLives:$("#gameLives"),timerCard:$("#timerCard"),progressFill:$("#progressFill"),progressLabel:$("#progressLabel"),comboFill:$("#comboFill"),countOverlay:$("#countOverlay"),countNumber:$("#countNumber"),pauseOverlay:$("#pauseOverlay"),resultOverlay:$("#resultOverlay"),resetOverlay:$("#resetOverlay"),resultIcon:$("#resultIcon"),resultTitle:$("#resultTitle"),resultCopy:$("#resultCopy"),resultScore:$("#resultScore"),resultAccuracy:$("#resultAccuracy"),resultCombo:$("#resultCombo"),resultSolved:$("#resultSolved"),resultReaction:$("#resultReaction"),resultXp:$("#resultXp"),dailyDate:$("#dailyDate"),dailyTitle:$("#dailyTitle"),dailyDesc:$("#dailyDesc"),dailyMode:$("#dailyMode"),dailyTarget:$("#dailyTarget"),dailyStart:$("#dailyStart"),dailyStamp:$("#dailyStamp"),nameInput:$("#nameInput"),avatar:$("#avatar"),profileName:$("#profileName"),profileLevel:$("#profileLevel"),profileRank:$("#profileRank"),profileGames:$("#profileGames"),profileAccuracy:$("#profileAccuracy"),leaderList:$("#leaderList"),badgeGrid:$("#badgeGrid"),statsGrid:$("#statsGrid"),performanceRows:$("#performanceRows"),darkToggle:$("#darkToggle"),soundToggle:$("#soundToggle"),animToggle:$("#animToggle"),toasts:$("#toasts")}}
+      bind(){$$('[data-nav]').forEach(b=>b.onclick=()=>this.show(b.dataset.nav));$("#brandHome").onclick=()=>this.show("home");$$('[data-start]').forEach(b=>b.onclick=e=>{e.stopPropagation();this.game.start(b.dataset.start)});$$('.mode-card').forEach(c=>{c.onclick=()=>this.game.start(c.dataset.mode);c.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();this.game.start(c.dataset.mode)}}});$("#pauseBtn").onclick=()=>this.game.pause();$("#resumeBtn").onclick=()=>this.game.resume();$("#restartBtn").onclick=()=>this.game.restart();$("#quitBtn").onclick=()=>{this.game.cancel();this.show("modes")};$("#againBtn").onclick=()=>{this.el.resultOverlay.classList.add("hidden");this.game.start(this.game.lastMode)};$("#modesBtn").onclick=()=>{this.el.resultOverlay.classList.add("hidden");this.show("modes")};$("#homeBtn").onclick=()=>{this.el.resultOverlay.classList.add("hidden");this.show("home")};this.el.quickSound.onclick=()=>this.toggleSound();this.el.gameSound.onclick=()=>this.toggleSound();$("#fullBtn").onclick=()=>this.fullscreen();$("#settingsFull").onclick=()=>this.fullscreen();this.el.dailyStart.onclick=()=>this.startDaily();$("#saveName").onclick=()=>this.saveName();this.el.nameInput.onkeydown=e=>{if(e.key==="Enter")this.saveName()};this.el.darkToggle.onchange=e=>{this.save.settings.dark=e.target.checked;this.applySettings();this.persist()};this.el.soundToggle.onchange=e=>{this.save.settings.sound=e.target.checked;this.applySettings();this.persist();this.audio.click()};this.el.animToggle.onchange=e=>{this.save.settings.animations=e.target.checked;this.applySettings();this.persist()};$("#resetBtn").onclick=()=>this.el.resetOverlay.classList.remove("hidden");$("#cancelReset").onclick=()=>this.el.resetOverlay.classList.add("hidden");$("#confirmReset").onclick=()=>this.reset();document.addEventListener("click",e=>{const b=e.target.closest('.ripple-target');if(b){this.ripple(e,b);this.audio.click()}});document.addEventListener("keydown",e=>this.key(e));const stage=$("#gameStage");stage.onpointerdown=e=>this.swipe={x:e.clientX,y:e.clientY,t:performance.now()};stage.onpointerup=e=>this.handleSwipe(e)}
+      persist(){try{localStorage.setItem(KEY,JSON.stringify(this.save))}catch{this.toast("Save unavailable","Your browser blocked local storage.","⚠")}}
+      applySettings(){const s=this.save.settings;document.body.dataset.theme=s.dark?"dark":"light";document.documentElement.classList.toggle("reduce-motion",!s.animations);this.audio.set(s.sound);this.particles.set(s.animations);if(this.el){this.el.darkToggle.checked=s.dark;this.el.soundToggle.checked=s.sound;this.el.animToggle.checked=s.animations;this.el.quickSound.textContent=this.el.gameSound.textContent=s.sound?"🔊":"🔇"}}
+      toggleSound(){this.save.settings.sound=!this.save.settings.sound;this.applySettings();this.persist();this.toast(this.save.settings.sound?"Sound on":"Sound off",this.save.settings.sound?"Audio feedback is active.":"MindRush is now silent.",this.save.settings.sound?"🔊":"🔇")}
+      async fullscreen(){try{if(!document.fullscreenElement){if(document.documentElement.requestFullscreen){await document.documentElement.requestFullscreen();this.toast("Fullscreen enabled","Immersive mode activated.","⛶")}else this.toast("Fullscreen unavailable","This browser does not support it.","⚠")}else if(document.exitFullscreen)await document.exitFullscreen()}catch{this.toast("Fullscreen blocked","Your browser prevented fullscreen mode.","⚠")}}
+      show(name){const next=$(`[data-screen="${name}"]`);if(!next)return;if(this.current==="game"&&this.game.running&&name!=="game"){this.game.pause();return}this.el.screens.forEach(s=>s.classList.toggle("active",s===next));this.current=name;this.el.nav.forEach(b=>b.classList.toggle("active",b.dataset.nav===name||(name==="stats"&&b.dataset.nav==="leaderboard")));scrollTo({top:0,behavior:this.save.settings.animations?"smooth":"auto"});this.render()}
+      async countdown(){this.el.countOverlay.classList.remove("hidden");for(const value of ["3","2","1","GO!"]){this.el.countNumber.textContent=value;this.el.countNumber.style.animation="none";void this.el.countNumber.offsetWidth;this.el.countNumber.style.animation="";this.audio.tone({f:value==="GO!"?780:420,d:value==="GO!"?.2:.08,type:"square",v:.045,to:value==="GO!"?1050:500});await sleep(value==="GO!"?520:730)}this.el.countOverlay.classList.add("hidden")}
+      key(e){if(e.key==="Escape"){if(!this.el.resetOverlay.classList.contains("hidden")){this.el.resetOverlay.classList.add("hidden");return}if(!this.el.resultOverlay.classList.contains("hidden")){this.el.resultOverlay.classList.add("hidden");this.show("home");return}if(this.game.running)this.game.paused?this.game.resume():this.game.pause()}if(this.current==="game"&&this.game.running&&!this.game.paused){const i=Number(e.key)-1,a=$$('.answer');if(Number.isInteger(i)&&i>=0&&i<a.length)a[i].click()}}
+      handleSwipe(e){if(!this.swipe)return;const s=this.swipe,dx=e.clientX-s.x,dy=e.clientY-s.y,dt=performance.now()-s.t;this.swipe=null;if(dt>650||Math.max(Math.abs(dx),Math.abs(dy))<60)return;const a=$$('.answer');if(this.current!=="game"||a.length<2)return;let index;if(Math.abs(dx)>=Math.abs(dy))index=dx>0?1:0;else index=dy>0?3:2;a[index]?.click()}
+      ripple(e,b){const r=b.getBoundingClientRect(),size=Math.max(r.width,r.height)*1.7,s=document.createElement("span");s.className="ripple";s.style.width=s.style.height=`${size}px`;s.style.left=`${e.clientX-r.left}px`;s.style.top=`${e.clientY-r.top}px`;b.appendChild(s);setTimeout(()=>s.remove(),680)}
+      scorePop(text,node,ok){const p=document.createElement("div"),r=node?.getBoundingClientRect?.(),x=r?r.left+r.width/2:innerWidth/2,y=r?r.top:innerHeight/2;p.className="score-pop";p.textContent=text;p.style.left=`${x}px`;p.style.top=`${y}px`;p.style.color=ok?"var(--green)":"var(--red)";document.body.appendChild(p);setTimeout(()=>p.remove(),950)}
+      toast(title,message,icon="✦",duration=3200){const t=document.createElement("div");t.className="toast";t.innerHTML=`<span class="toast-icon">${icon}</span><div><strong>${title}</strong><span>${message}</span></div>`;this.el.toasts.appendChild(t);setTimeout(()=>{t.classList.add("out");setTimeout(()=>t.remove(),280)},duration)}
+      xpFor(level){return 400+(level-1)*160}
+      levelInfo(xp){let level=1,left=Math.max(0,xp),need=this.xpFor(level);while(left>=need){left-=need;level++;need=this.xpFor(level)}return{level,current:left,need,progress:need?left/need*100:100}}
+      addXp(amount){const before=this.levelInfo(this.save.profile.xp);this.save.profile.xp+=Math.max(0,Math.round(amount));const after=this.levelInfo(this.save.profile.xp);this.save.profile.level=after.level;if(after.level>before.level){this.save.profile.coins+=(after.level-before.level)*75;this.audio.level();if(this.save.settings.animations)this.confetti.burst(150);this.toast(`Level ${after.level} unlocked`,`Bonus coins added to your profile.`,`⚡`,4200)}return after.level>before.level}
+      accuracy(){const a=this.save.stats.correct+this.save.stats.wrong;return a?this.save.stats.correct/a*100:0}
+      avgReaction(){return this.save.stats.reactions?this.save.stats.totalReaction/this.save.stats.reactions:0}
+      updateStreak(){const today=dateKey(),last=this.save.profile.lastPlayed;if(last&&dayDiff(last,today)>1){this.save.profile.streak=0;this.persist()}}
+      markPlayed(){const today=dateKey(),last=this.save.profile.lastPlayed;if(!last)this.save.profile.streak=1;else if(last!==today)this.save.profile.streak=dayDiff(last,today)===1?this.save.profile.streak+1:1;this.save.profile.lastPlayed=today}
+      complete(r){const attempts=r.correct+r.wrong,accuracy=attempts?r.correct/attempts*100:0,avg=r.reactions.length?r.reactions.reduce((a,b)=>a+b,0)/r.reactions.length:0;let xp=Math.round(r.score*.24)+r.correct*8+r.bestCombo*4+(r.won?75:20)+Math.min(100,this.save.profile.streak*5),coins=Math.floor(r.score/140)+(r.won?10:4);if(r.daily&&r.dailyWin&&this.save.daily.completed!==dateKey()){xp+=this.daily.xp;coins+=this.daily.coins;this.save.daily.completed=dateKey();this.save.daily.best=Math.max(this.save.daily.best,r.score);this.toast("Daily challenge cleared",`+${this.daily.xp} XP and +${this.daily.coins} coins.`,`☀`,4600)}this.markPlayed();this.save.profile.coins+=coins;this.addXp(xp);this.save.scores.high=Math.max(this.save.scores.high,r.score);this.save.scores[r.mode]=Math.max(this.save.scores[r.mode],r.score);const s=this.save.stats;s.games++;s.wins+=r.won?1:0;s.losses+=r.won?0:1;s.correct+=r.correct;s.wrong+=r.wrong;s.totalReaction+=r.reactions.reduce((a,b)=>a+b,0);s.reactions+=r.reactions.length;s.highestCombo=Math.max(s.highestCombo,r.bestCombo);s.totalScore+=r.score;if(r.fastest>0)s.fastest=s.fastest===0?r.fastest:Math.min(s.fastest,r.fastest);this.updateLeaderboard();const unlocked=this.checkAchievements(true);this.persist();this.render();this.el.resultIcon.textContent=r.won?"🏆":"⚡";this.el.resultTitle.textContent=r.daily&&r.dailyWin?"Daily Cleared":r.won?"Rush Complete":"Run Complete";this.el.resultCopy.textContent=r.daily&&!r.dailyWin?`Target missed. You needed ${num(this.daily.target)} points.`:unlocked.length?`Achievement unlocked: ${unlocked.map(x=>x.name).join(", ")}.`:"Your score, XP, coins, and statistics have been saved.";this.el.resultScore.textContent=num(r.score);this.el.resultAccuracy.textContent=pct(accuracy);this.el.resultCombo.textContent=r.bestCombo;this.el.resultSolved.textContent=r.correct;this.el.resultReaction.textContent=avg?`${(avg/1000).toFixed(2)}s`:"—";this.el.resultXp.textContent=`+${num(xp)} XP • +${num(coins)} coins`;this.el.resultOverlay.classList.remove("hidden");if(r.won){this.audio.victory();if(this.save.settings.animations)this.confetti.burst(r.daily?170:90)}}
+      checkAchievements(announce=true){const list=[];for(const a of ACHIEVEMENTS)if(!this.save.achievements.includes(a.id)&&a.check(this.save)){this.save.achievements.push(a.id);list.push(a)}if(announce)list.forEach((a,i)=>setTimeout(()=>this.toast("Achievement unlocked",a.name,a.icon,4200),i*500));if(list.length)this.persist();return list}
+      startDaily(){if(this.save.daily.completed===dateKey()){this.toast("Already completed","A new challenge arrives tomorrow.","✓");return}this.game.start(this.daily.mode,{daily:true,target:this.daily.target})}
+      saveName(){const name=this.el.nameInput.value.trim().replace(/[<>]/g,"").slice(0,18)||"Player";this.save.profile.name=name;this.el.nameInput.value=name;this.updateLeaderboard();this.persist();this.render();this.toast("Profile updated",`You are now ${name}.`,`✦`)}
+      updateLeaderboard(){const name=this.save.profile.name,current={name,score:this.save.scores.high,games:this.save.stats.games,accuracy:this.accuracy(),updated:Date.now()};this.save.leaderboard=this.save.leaderboard.filter(e=>e.name.toLowerCase()!==name.toLowerCase());this.save.leaderboard.push(current);this.save.leaderboard.sort((a,b)=>b.score-a.score);this.save.leaderboard=this.save.leaderboard.slice(0,20)}
+      entries(){const bots=[{name:"NovaByte",score:2840,games:142,accuracy:94},{name:"SynapseX",score:2310,games:109,accuracy:91},{name:"PixelPulse",score:1870,games:88,accuracy:89},{name:"LogicFox",score:1420,games:66,accuracy:87},{name:"NeonNerd",score:990,games:51,accuracy:84},{name:"QuickQuark",score:720,games:34,accuracy:82}],current={name:this.save.profile.name,score:this.save.scores.high,games:this.save.stats.games,accuracy:this.accuracy(),current:true},all=[...bots,...this.save.leaderboard.map(e=>({...e,current:e.name.toLowerCase()===this.save.profile.name.toLowerCase()})),current],map=new Map();for(const e of all){const k=e.name.toLowerCase(),old=map.get(k);if(!old||e.score>old.score||e.current)map.set(k,e)}return[...map.values()].sort((a,b)=>b.score-a.score).slice(0,12)}
+      render(){this.renderTop();this.renderHome();this.renderModes();this.renderDaily();this.renderLeaderboard();this.renderBadges();this.renderStats();this.applySettings()}
+      renderTop(){const l=this.levelInfo(this.save.profile.xp);this.el.topLevel.textContent=`Lv ${l.level}`;this.el.topXp.textContent=`${num(l.current)} XP`;this.el.topCoins.textContent=num(this.save.profile.coins)}
+      renderHome(){const l=this.levelInfo(this.save.profile.xp),done=this.save.daily.completed===dateKey();this.el.homeBest.textContent=num(this.save.scores.high);this.el.homeGames.textContent=num(this.save.stats.games);this.el.homeAccuracy.textContent=pct(this.accuracy());this.el.homeStreak.textContent=num(this.save.profile.streak);this.el.homeLevel.textContent=l.level;this.el.homeLevelProgress.style.width=`${l.progress}%`;this.el.homeXpLabel.textContent=`${num(l.current)} / ${num(l.need)} XP`;this.el.homeXpLeft.textContent=num(l.need-l.current);this.el.homeDailyTitle.textContent=this.daily.title;this.el.homeDailyCopy.textContent=done?"Challenge cleared. Your reward cache is secured.":`Reach ${num(this.daily.target)} points in ${this.daily.name}.`;this.el.homeDailyProgress.style.width=done?"100%":"0%";this.el.homeDailyState.textContent=done?"Completed":"Ready"}
+      renderModes(){this.el.mathBest.textContent=num(this.save.scores.math);this.el.memoryBest.textContent=num(this.save.scores.memory);this.el.logicBest.textContent=num(this.save.scores.logic)}
+      renderDaily(){const done=this.save.daily.completed===dateKey();this.el.dailyDate.textContent=new Intl.DateTimeFormat("en-US",{weekday:"long",month:"short",day:"numeric"}).format(new Date());this.el.dailyTitle.textContent=this.daily.title;this.el.dailyDesc.textContent=this.daily.desc;this.el.dailyMode.textContent=this.daily.name;this.el.dailyTarget.textContent=num(this.daily.target);this.el.dailyStart.classList.toggle("hidden",done);this.el.dailyStamp.classList.toggle("hidden",!done)}
+      escape(v){return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
+      renderLeaderboard(){const entries=this.entries(),rank=Math.max(0,entries.findIndex(e=>e.current));this.el.nameInput.value=this.save.profile.name;this.el.profileName.textContent=this.save.profile.name;this.el.avatar.textContent=this.save.profile.name.slice(0,1).toUpperCase();this.el.profileLevel.textContent=this.save.profile.level;this.el.profileRank.textContent=`#${rank+1}`;this.el.profileGames.textContent=num(this.save.stats.games);this.el.profileAccuracy.textContent=pct(this.accuracy());this.el.leaderList.innerHTML=entries.map((e,i)=>`<div class="leader-row ${e.current?"current":""}"><div class="rank">${i+1}</div><div class="leader-name"><strong>${this.escape(e.name)}${e.current?" • You":""}</strong><small>${num(e.games||0)} games • ${pct(e.accuracy||0)} accuracy</small></div><div class="leader-score"><strong>${num(e.score||0)}</strong><small>points</small></div></div>`).join("")}
+      renderBadges(){this.el.badgeGrid.innerHTML=ACHIEVEMENTS.map(a=>{const unlocked=this.save.achievements.includes(a.id);return`<article class="badge ${unlocked?"unlocked":"locked"}"><div class="badge-orb">${unlocked?a.icon:"🔒"}</div><h3>${a.name}</h3><p>${a.desc}</p><span class="badge-state">${unlocked?"Unlocked":"Locked"}</span></article>`}).join("")}
+      renderStats(){const s=this.save.stats,attempts=s.correct+s.wrong,accuracy=this.accuracy(),avg=this.avgReaction(),winRate=s.games?s.wins/s.games*100:0,avgScore=s.games?s.totalScore/s.games:0,cards=[{i:"🎮",v:num(s.games),l:"Games Played",c:"var(--cyan)"},{i:"🏆",v:num(s.wins),l:"Wins",c:"var(--yellow)"},{i:"✕",v:num(s.losses),l:"Losses",c:"var(--red)"},{i:"◎",v:pct(accuracy),l:"Accuracy",c:"var(--green)"},{i:"⏱",v:avg?`${(avg/1000).toFixed(2)}s`:"—",l:"Avg Reaction",c:"var(--blue)"},{i:"🔥",v:num(s.highestCombo),l:"Highest Combo",c:"var(--pink)"},{i:"⚡",v:s.fastest?`${(s.fastest/1000).toFixed(2)}s`:"—",l:"Fastest Solve",c:"var(--purple)"},{i:"✦",v:num(avgScore),l:"Average Score",c:"var(--cyan)"}];this.el.statsGrid.innerHTML=cards.map(c=>`<article class="glass stat" style="--stat:${c.c}"><div class="stat-icon">${c.i}</div><strong class="stat-value">${c.v}</strong><span class="stat-label">${c.l}</span></article>`).join("");const max=Math.max(1000,this.save.scores.math,this.save.scores.memory,this.save.scores.logic),rows=[{l:"Mental Math",v:this.save.scores.math},{l:"Memory",v:this.save.scores.memory},{l:"Logic",v:this.save.scores.logic},{l:"Win Rate",v:winRate,p:true},{l:"Accuracy",v:attempts?accuracy:0,p:true}];this.el.performanceRows.innerHTML=rows.map(r=>`<div class="perf-row"><span class="perf-label">${r.l}</span><div class="perf-bar"><span style="width:${r.p?clamp(r.v,0,100):clamp(r.v/max*100,0,100)}%"></span></div><strong class="perf-value">${r.p?pct(r.v):num(r.v)}</strong></div>`).join("")}
+      reset(){const settings={...this.save.settings};this.game.cancel();this.save=defaults();this.save.settings=settings;this.daily=dailyChallenge();this.persist();this.applySettings();this.render();this.el.resetOverlay.classList.add("hidden");this.toast("Progress reset","MindRush is ready for a fresh start.","⟳");this.show("home")}
+    }
+
+    /* =========================================================
+       BOOTSTRAP
+       ========================================================= */
+    addEventListener("DOMContentLoaded",()=>{window.mindRush=new App()});
+  </script>
+</body>
+</html>
