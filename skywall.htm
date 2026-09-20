@@ -1,0 +1,1003 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0618">
+<title>Skywall</title>
+<style>
+/* ============================================================
+   SKYWALL — a vertical wall-climbing arcade game
+   Palette: violet world / periwinkle walls / coral barriers /
+            amber ball (the only warm object on screen)
+   ============================================================ */
+
+:root{
+  --bg-deep:#07040f;
+  --bg-mid:#14092e;
+  --bg-high:#1d1046;
+  --wall:#6b5cff;
+  --wall-soft:#9a8dff;
+  --hazard:#ff4d7d;
+  --ball:#ffc14d;
+  --ink:#efeaff;
+  --ink-dim:#a396d4;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+
+html,body{
+  height:100%;
+  overflow:hidden;
+  background:var(--bg-deep);
+  color:var(--ink);
+  font-family:"Avenir Next","Futura","Century Gothic",
+              "Segoe UI",system-ui,-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:none;              /* no page scroll / pinch while playing */
+  overscroll-behavior:none;
+  user-select:none;
+  -webkit-user-select:none;
+}
+
+body{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:
+    radial-gradient(120% 80% at 50% 100%, #241154 0%, transparent 60%),
+    radial-gradient(100% 60% at 50% 0%, #180c38 0%, transparent 70%),
+    var(--bg-deep);
+}
+
+/* ---- Play column -------------------------------------------------- */
+#stage{
+  position:relative;
+  width:min(100vw, 62dvh, 540px);
+  height:100dvh;
+  height:100vh;                   /* fallback for older browsers */
+  overflow:hidden;
+  box-shadow:0 0 120px rgba(107,92,255,.22);
+}
+#game{display:block;width:100%;height:100%;}
+
+/* ---- Heads-up display --------------------------------------------- */
+#hud{
+  position:absolute;
+  inset:0 0 auto 0;
+  padding:calc(14px + env(safe-area-inset-top)) 18px 0;
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:start;
+  gap:10px;
+  pointer-events:none;
+  z-index:2;
+}
+.wordmark{
+  font-size:12px;
+  font-weight:600;
+  letter-spacing:.42em;
+  color:var(--wall-soft);
+  text-shadow:0 0 18px rgba(107,92,255,.75);
+  line-height:1.2;
+}
+#scoreWrap{
+  text-align:center;
+  transition:transform .12s ease-out;
+}
+#score{
+  font-size:44px;
+  font-weight:300;
+  letter-spacing:.02em;
+  font-variant-numeric:tabular-nums;
+  line-height:1;
+  color:#fff;
+  text-shadow:0 0 26px rgba(255,193,77,.35);
+}
+#scoreWrap.bump{transform:scale(1.14);}
+.best{
+  justify-self:end;
+  text-align:right;
+  font-size:12px;
+  font-weight:500;
+  letter-spacing:.06em;
+  color:var(--ink-dim);
+  line-height:1.5;
+}
+.best b{
+  display:block;
+  font-size:17px;
+  font-weight:500;
+  color:var(--ink);
+  font-variant-numeric:tabular-nums;
+}
+#hud.dim{opacity:0;transition:opacity .25s ease;}
+
+/* ---- Hint that fades once you start climbing ----------------------- */
+#hint{
+  position:absolute;
+  left:0;right:0;
+  bottom:calc(74px + env(safe-area-inset-bottom));
+  text-align:center;
+  font-size:13px;
+  letter-spacing:.16em;
+  color:var(--ink-dim);
+  pointer-events:none;
+  z-index:2;
+  opacity:0;
+  transition:opacity .4s ease;
+}
+#hint.show{opacity:.85;}
+
+/* ---- Overlay screens ---------------------------------------------- */
+.screen{
+  position:absolute;
+  inset:0;
+  z-index:3;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:32px 26px calc(32px + env(safe-area-inset-bottom));
+  text-align:center;
+  background:
+    radial-gradient(80% 55% at 50% 45%, rgba(20,9,46,.86) 0%, rgba(7,4,15,.94) 100%);
+  backdrop-filter:blur(7px);
+  -webkit-backdrop-filter:blur(7px);
+}
+.screen[hidden]{display:none;}
+
+.title{
+  font-size:clamp(40px,13vw,66px);
+  font-weight:200;
+  letter-spacing:.24em;
+  margin-right:-.24em;            /* optical centring for the tracking */
+  background:linear-gradient(178deg,#fff 10%,var(--wall-soft) 95%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  filter:drop-shadow(0 0 30px rgba(107,92,255,.55));
+}
+.tagline{
+  max-width:26ch;
+  font-size:15px;
+  line-height:1.6;
+  color:var(--ink-dim);
+  margin-top:12px;
+}
+.rule{
+  width:46px;height:2px;border-radius:2px;
+  margin:22px 0 4px;
+  background:linear-gradient(90deg,transparent,var(--hazard),transparent);
+}
+
+.readout{
+  display:flex;
+  gap:38px;
+  margin:22px 0 6px;
+}
+.readout div{min-width:88px;}
+.readout span{
+  display:block;
+  font-size:11px;
+  letter-spacing:.2em;
+  color:var(--ink-dim);
+  margin-bottom:7px;
+}
+.readout strong{
+  font-size:40px;
+  font-weight:300;
+  font-variant-numeric:tabular-nums;
+  color:#fff;
+}
+.readout .hi strong{color:var(--ball);}
+#newBest{
+  font-size:12px;
+  letter-spacing:.2em;
+  color:var(--ball);
+  min-height:16px;
+}
+
+button{
+  margin-top:26px;
+  padding:15px 46px;
+  border:0;
+  border-radius:999px;
+  font:inherit;
+  font-size:15px;
+  font-weight:600;
+  letter-spacing:.13em;
+  color:#2a1600;
+  background:linear-gradient(180deg,#ffd479,var(--ball));
+  box-shadow:0 10px 34px rgba(255,193,77,.32);
+  cursor:pointer;
+  transition:transform .14s ease, box-shadow .14s ease;
+}
+button:hover{transform:translateY(-2px);box-shadow:0 14px 40px rgba(255,193,77,.42);}
+button:active{transform:translateY(1px);}
+button:focus-visible{outline:3px solid var(--wall-soft);outline-offset:4px;}
+
+.legend{
+  margin-top:20px;
+  font-size:12px;
+  letter-spacing:.1em;
+  color:var(--ink-dim);
+  line-height:1.8;
+}
+
+@media (prefers-reduced-motion:reduce){
+  button,#scoreWrap{transition:none;}
+}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <canvas id="game"></canvas>
+
+  <!-- Heads-up display -->
+  <div id="hud" class="dim">
+    <div class="wordmark">SKYWALL</div>
+    <div id="scoreWrap"><div id="score">0</div></div>
+    <div class="best">best<b id="bestHud">0</b></div>
+  </div>
+
+  <div id="hint">TAP TO SWITCH SIDES</div>
+
+  <!-- Start screen -->
+  <section class="screen" id="startScreen">
+    <h1 class="title">SKYWALL</h1>
+    <div class="rule"></div>
+    <p class="tagline">The ball climbs on its own. Move it to the far wall before a barrier reaches you.</p>
+    <button id="playBtn">START CLIMB</button>
+    <p class="legend">tap &nbsp;·&nbsp; click &nbsp;·&nbsp; space</p>
+  </section>
+
+  <!-- Game-over screen -->
+  <section class="screen" id="overScreen" hidden>
+    <h2 class="title" style="font-size:clamp(28px,9vw,42px)">YOU FELL</h2>
+    <div class="readout">
+      <div><span>height</span><strong id="finalScore">0</strong></div>
+      <div class="hi"><span>best</span><strong id="bestScore">0</strong></div>
+    </div>
+    <div id="newBest"></div>
+    <button id="againBtn">CLIMB AGAIN</button>
+    <p class="legend">or press space</p>
+  </section>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+/* ==================================================================
+   0. Constants and small helpers
+   ================================================================== */
+
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const C = {
+  // geometry, expressed as fractions of the play column so every
+  // screen size plays identically
+  WALL_W     : 0.055,   // wall thickness      (x fraction of width)
+  BALL_R     : 0.052,   // ball radius         (x fraction of width)
+  BAR_H      : 0.045,   // barrier thickness   (x fraction of width)
+  BALL_SCREEN: 0.68,    // ball's fixed screen position (y fraction)
+
+  SWITCH_TIME: 0.20,    // seconds to cross from wall to wall
+  SPEED_MIN  : 0.36,    // climb speed at score 0   (y fraction / sec)
+  SPEED_MAX  : 0.66,    // climb speed at full difficulty
+  GAP_MAX    : 0.42,    // vertical spacing, easy   (y fraction)
+  GAP_MIN    : 0.23,    // vertical spacing, hard
+  RAMP       : 140,     // score at which difficulty maxes out
+  SCORE_UNIT : 0.06,    // height per point         (y fraction)
+
+  TRAIL_MAX  : 26,
+  STORE_KEY  : "skywall.best"
+};
+
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp  = (a, b, t) => a + (b - a) * t;
+const rand  = (a, b) => a + Math.random() * (b - a);
+// easeInOutCubic — slow off the wall, quick through the middle, soft landing
+const ease  = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+
+/* ==================================================================
+   1. Canvas, sizing and device-pixel-ratio handling
+   ================================================================== */
+
+const stage  = document.getElementById("stage");
+const canvas = document.getElementById("game");
+const ctx    = canvas.getContext("2d");
+
+let W = 0, H = 0, DPR = 1;      // CSS pixel size of the play column
+let wallW = 0, ballR = 0, barH = 0, leftX = 0, rightX = 0;
+
+function computeMetrics(){
+  wallW = W * C.WALL_W;
+  ballR = W * C.BALL_R;
+  barH  = clamp(W * C.BAR_H, 9, 26);
+  leftX  = wallW + ballR;         // ball centre when hugging the left wall
+  rightX = W - wallW - ballR;     // ball centre when hugging the right wall
+}
+
+function resize(){
+  const rect = stage.getBoundingClientRect();
+  const newW = Math.max(1, Math.round(rect.width));
+  const newH = Math.max(1, Math.round(rect.height));
+  const sx = W ? newW / W : 1;
+  const sy = H ? newH / H : 1;
+
+  W = newW; H = newH;
+  DPR = clamp(window.devicePixelRatio || 1, 1, 3);
+  canvas.width  = Math.round(W * DPR);
+  canvas.height = Math.round(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  computeMetrics();
+
+  // keep an in-progress run consistent when the viewport changes
+  if (sx !== 1 || sy !== 1) game.rescale(sx, sy);
+}
+
+new ResizeObserver(resize).observe(stage);
+window.addEventListener("orientationchange", () => setTimeout(resize, 120));
+
+/* ==================================================================
+   2. Particles — switch bursts, crash debris, passing sparks
+   ================================================================== */
+
+const Particles = {
+  list: [],
+
+  spawn(x, y, n, opts = {}){
+    if (REDUCED) n = Math.ceil(n / 3);
+    const {
+      color = "#ffc14d", speed = 1, spread = Math.PI * 2,
+      dir = 0, size = 1, life = 1
+    } = opts;
+    for (let i = 0; i < n; i++){
+      const a = dir + rand(-spread / 2, spread / 2);
+      const v = rand(.35, 1) * speed * W;
+      this.list.push({
+        x, y,
+        vx: Math.cos(a) * v,
+        vy: Math.sin(a) * v,
+        r : rand(.012, .03) * W * size,
+        life: rand(.45, .95) * life,
+        max : 1,
+        color
+      });
+    }
+  },
+
+  update(dt){
+    for (let i = this.list.length - 1; i >= 0; i--){
+      const p = this.list[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= 0.94;
+      p.vy = p.vy * 0.94 - W * 0.5 * dt;   // slight downward drag in world space
+      p.life -= dt;
+      if (p.life <= 0) this.list.splice(i, 1);
+    }
+  },
+
+  draw(toScreenY){
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (const p of this.list){
+      const a = clamp(p.life / p.max, 0, 1);
+      ctx.globalAlpha = a * 0.9;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, toScreenY(p.y), p.r * (0.4 + a * 0.6), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  },
+
+  clear(){ this.list.length = 0; },
+
+  rescale(sx, sy){
+    for (const p of this.list){ p.x *= sx; p.y *= sy; p.r *= sx; }
+  }
+};
+
+/* ==================================================================
+   3. Game state
+   ------------------------------------------------------------------
+   World coordinates: y grows UPWARD. The camera keeps the ball at a
+   fixed screen height, so screenY = H - (worldY - camY).
+   ================================================================== */
+
+const game = {
+  mode: "start",          // start | playing | dead
+  ball: null,
+  obstacles: [],
+  camY: 0,
+  startY: 0,
+  climb: 0,
+  score: 0,
+  best: 0,
+  speed: 0,
+  nextY: 0,
+  sameRun: 1,
+  shake: 0,
+  flash: 0,
+  deadAt: 0,
+  trail: [],
+
+  /* -------- difficulty curve -------- */
+  get diff(){ return clamp(this.score / C.RAMP, 0, 1); },
+
+  reset(){
+    computeMetrics();
+    this.obstacles.length = 0;
+    this.trail.length = 0;
+    Particles.clear();
+
+    this.ball = {
+      side   : "left",      // wall the ball belongs to (target while switching)
+      x      : leftX,
+      y      : H * 0.22,
+      fromX  : leftX,
+      toX    : leftX,
+      t      : 1,           // switch progress, 1 = settled
+      angle  : 0
+    };
+
+    this.startY = this.ball.y;
+    this.camY   = this.ball.y - (H - H * C.BALL_SCREEN);
+    this.climb  = 0;
+    this.score  = 0;
+    this.speed  = H * C.SPEED_MIN;
+    this.shake  = 0;
+    this.flash  = 0;
+    this.sameRun = 1;
+
+    // first barrier sits a comfortable screen away from the start
+    this.nextY = this.ball.y + H * 0.95;
+    this.fill();
+    ui.setScore(0);
+  },
+
+  /* -------- obstacle generation -----------------------------------
+     Every barrier is anchored to one wall and reaches inward, so the
+     opposite channel is always open. Spacing is clamped so a switch
+     always has time to complete: that is what makes every gap
+     reachable rather than merely likely.
+     ---------------------------------------------------------------- */
+  fill(){
+    const horizon = this.camY + H * 2;
+    while (this.nextY < horizon){
+      const prev = this.obstacles[this.obstacles.length - 1];
+      const d = this.diff;
+
+      // pick a side; repeats are allowed but never more than twice
+      let side;
+      if (!prev){
+        side = Math.random() < .5 ? "left" : "right";
+        this.sameRun = 1;
+      } else {
+        const repeat = Math.random() < (0.30 - 0.12 * d) && this.sameRun < 2;
+        side = repeat ? prev.side : (prev.side === "left" ? "right" : "left");
+        this.sameRun = repeat ? this.sameRun + 1 : 1;
+      }
+
+      // length: long enough to seal its own channel, short enough to
+      // leave the opposite channel clear
+      const minLen = wallW + 2 * ballR + W * 0.03;
+      const maxLen = W - (wallW + 2 * ballR) - W * 0.035;
+      const len = rand(minLen, Math.max(minLen, maxLen));
+
+      this.obstacles.push({ y: this.nextY, side, len, h: barH, passed: false });
+
+      // spacing to the barrier after this one
+      const speedAt = H * lerp(C.SPEED_MIN, C.SPEED_MAX, d);
+      const needed  = 2 * ballR + barH + speedAt * C.SWITCH_TIME * 2.0;  // safety floor
+      const wanted  = H * lerp(C.GAP_MAX, C.GAP_MIN, d);
+      const gap     = Math.max(wanted, needed);
+      // a same-side follow-up needs no switch, so it may crowd in closer
+      this.nextY += (Math.random() < 0.34 && this.sameRun < 2)
+        ? Math.max(gap * 0.55, 2 * ballR + barH + H * 0.03)
+        : gap;
+    }
+
+    // drop barriers that have scrolled well below the view
+    while (this.obstacles.length && this.obstacles[0].y < this.camY - H * 0.4){
+      this.obstacles.shift();
+    }
+  },
+
+  /* -------- player input -------- */
+  switchSide(){
+    if (this.mode !== "playing") return;
+    const b = this.ball;
+    const target = b.side === "left" ? "right" : "left";
+    b.fromX = b.x;
+    b.toX   = target === "left" ? leftX : rightX;
+    b.side  = target;
+    b.t     = 0;
+
+    // spray off the wall we are leaving
+    const wallSide = target === "left" ? 1 : -1;   // burst points back at old wall
+    Particles.spawn(b.x + wallSide * -ballR, b.y, 14, {
+      color: "#9a8dff", speed: .62, dir: wallSide > 0 ? 0 : Math.PI,
+      spread: Math.PI * .85, size: .8, life: .8
+    });
+    ui.hideHint();
+  },
+
+  /* -------- per-frame update -------- */
+  update(dt){
+    if (this.mode !== "playing"){
+      Particles.update(dt);
+      this.shake = Math.max(0, this.shake - dt * 3.2);
+      this.flash = Math.max(0, this.flash - dt * 2.4);
+      return;
+    }
+
+    const b = this.ball;
+    this.speed = H * lerp(C.SPEED_MIN, C.SPEED_MAX, this.diff);
+
+    // climb
+    const dy = this.speed * dt;
+    b.y += dy;
+    this.climb += dy;
+
+    // horizontal easing between walls
+    if (b.t < 1){
+      b.t = Math.min(1, b.t + dt / C.SWITCH_TIME);
+      b.x = lerp(b.fromX, b.toX, ease(b.t));
+    } else {
+      b.x = b.side === "left" ? leftX : rightX;
+    }
+
+    // rolling: contact with the left wall spins one way, right the other
+    const dirSign = b.side === "left" ? 1 : -1;
+    b.angle += (dy / ballR) * dirSign * (b.t < 1 ? 0.55 : 1);
+
+    // camera + score
+    this.camY = b.y - (H - H * C.BALL_SCREEN);
+    const s = Math.floor(this.climb / (H * C.SCORE_UNIT));
+    if (s !== this.score){ this.score = s; ui.setScore(s); }
+
+    // trail
+    this.trail.push({ x: b.x, y: b.y });
+    if (this.trail.length > C.TRAIL_MAX) this.trail.shift();
+
+    this.fill();
+
+    // collisions + pass sparks
+    for (const o of this.obstacles){
+      if (Math.abs(o.y - b.y) > ballR + o.h + 4) {
+        if (!o.passed && o.y < b.y){
+          o.passed = true;
+          const px = o.side === "left" ? o.len : W - o.len;
+          Particles.spawn(px, o.y, 5, {
+            color: "#ff4d7d", speed: .22, size: .55, life: .55
+          });
+        }
+        continue;
+      }
+      if (this.hits(b, o)){ this.die(); return; }
+    }
+
+    Particles.update(dt);
+    this.shake = Math.max(0, this.shake - dt * 3.2);
+    this.flash = Math.max(0, this.flash - dt * 2.4);
+  },
+
+  /* circle vs axis-aligned rectangle */
+  hits(b, o){
+    const rx = o.side === "left" ? 0 : W - o.len;
+    const ry = o.y - o.h / 2;
+    const cx = clamp(b.x, rx, rx + o.len);
+    const cy = clamp(b.y, ry, ry + o.h);
+    const dx = b.x - cx, dy = b.y - cy;
+    return dx * dx + dy * dy < ballR * ballR;
+  },
+
+  die(){
+    this.mode = "dead";
+    this.deadAt = performance.now();
+    this.shake = REDUCED ? 0 : 1;
+    this.flash = 1;
+
+    Particles.spawn(this.ball.x, this.ball.y, 34, {
+      color: "#ffc14d", speed: 1.15, size: 1.15, life: 1.15
+    });
+    Particles.spawn(this.ball.x, this.ball.y, 16, {
+      color: "#ff4d7d", speed: .85, size: .9, life: 1
+    });
+
+    if (this.score > this.best){
+      this.best = this.score;
+      store.save(this.best);
+      ui.newBest = true;
+    } else {
+      ui.newBest = false;
+    }
+    setTimeout(() => { if (this.mode === "dead") ui.showOver(); }, 520);
+  },
+
+  rescale(sx, sy){
+    computeMetrics();
+    const b = this.ball;
+    if (b){
+      b.y *= sy;
+      b.fromX *= sx; b.toX *= sx;
+      b.toX = b.side === "left" ? leftX : rightX;
+      b.x = b.t < 1 ? lerp(b.fromX, b.toX, ease(b.t))
+                    : (b.side === "left" ? leftX : rightX);
+    }
+    for (const o of this.obstacles){ o.y *= sy; o.len *= sx; o.h = barH; }
+    for (const p of this.trail){ p.x *= sx; p.y *= sy; }
+    Particles.rescale(sx, sy);
+    this.camY *= sy; this.nextY *= sy;
+    this.climb *= sy; this.startY *= sy;
+  }
+};
+
+/* ==================================================================
+   4. Rendering
+   ================================================================== */
+
+const toScreenY = wy => H - (wy - game.camY);
+
+function drawBackground(){
+  // base gradient
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#07040f");
+  g.addColorStop(.55, "#140a2d");
+  g.addColorStop(1, "#1d1046");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  // slow parallax dust — sells the sense of altitude
+  const par = game.camY * 0.28;
+  const step = H * 0.16;
+  ctx.save();
+  ctx.globalAlpha = .5;
+  for (let i = -1; i < H / step + 2; i++){
+    const y = ((i * step + par % step) % (H + step) + H + step) % (H + step);
+    const seed = Math.floor((game.camY * 0.28 + i * step) / step);
+    const x = ((Math.sin(seed * 12.9898) * 43758.5453) % 1 + 1) % 1 * W;
+    const r = 1 + ((Math.sin(seed * 78.233) * 12345.678) % 1 + 1) % 1 * 1.6;
+    ctx.fillStyle = "#8f7fff";
+    ctx.beginPath();
+    ctx.arc(x, H - y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // centre haze
+  const h = ctx.createRadialGradient(W / 2, H * .55, 0, W / 2, H * .55, W * .95);
+  h.addColorStop(0, "rgba(107,92,255,.13)");
+  h.addColorStop(1, "rgba(107,92,255,0)");
+  ctx.fillStyle = h;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawWalls(){
+  ctx.save();
+  // glowing inner edge
+  for (const side of [0, 1]){
+    const x = side === 0 ? 0 : W - wallW;
+    const g = ctx.createLinearGradient(x, 0, x + wallW, 0);
+    const stops = side === 0
+      ? [["#241a5e", 0], ["#6b5cff", 1]]
+      : [["#6b5cff", 0], ["#241a5e", 1]];
+    for (const [c, p] of stops) g.addColorStop(p, c);
+    ctx.fillStyle = g;
+    ctx.fillRect(x, 0, wallW, H);
+  }
+
+  // scrolling rungs so the walls read as moving surfaces
+  const step = H * 0.085;
+  const off = (game.camY % step + step) % step;
+  ctx.globalCompositeOperation = "lighter";
+  ctx.fillStyle = "rgba(154,141,255,.55)";
+  for (let y = H + off; y > -step; y -= step){
+    ctx.fillRect(wallW * .25, y, wallW * .5, 2);
+    ctx.fillRect(W - wallW * .75, y, wallW * .5, 2);
+  }
+
+  // inner glow line
+  ctx.shadowColor = "#6b5cff";
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = "#b9aeff";
+  ctx.fillRect(wallW - 2, 0, 2, H);
+  ctx.fillRect(W - wallW, 0, 2, H);
+  ctx.restore();
+}
+
+function drawObstacles(){
+  ctx.save();
+  for (const o of game.obstacles){
+    const sy = toScreenY(o.y);
+    if (sy < -60 || sy > H + 60) continue;
+
+    const x = o.side === "left" ? 0 : W - o.len;
+    const y = sy - o.h / 2;
+    const r = o.h / 2;
+
+    // glow
+    ctx.shadowColor = "rgba(255,77,125,.9)";
+    ctx.shadowBlur = 22;
+
+    const g = ctx.createLinearGradient(x, 0, x + o.len, 0);
+    if (o.side === "left"){
+      g.addColorStop(0, "#ff2f66");
+      g.addColorStop(1, "#ff85a6");
+    } else {
+      g.addColorStop(0, "#ff85a6");
+      g.addColorStop(1, "#ff2f66");
+    }
+    ctx.fillStyle = g;
+    roundRect(x, y, o.len, o.h, r);
+    ctx.fill();
+
+    // bright cap at the dangerous inner tip
+    ctx.shadowBlur = 26;
+    ctx.fillStyle = "#ffd2de";
+    const tipX = o.side === "left" ? x + o.len - o.h : x;
+    roundRect(tipX, y, o.h, o.h, r);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function roundRect(x, y, w, h, r){
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawTrail(){
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const n = game.trail.length;
+  for (let i = 0; i < n; i++){
+    const p = game.trail[i];
+    const a = (i / n) * 0.36;
+    ctx.globalAlpha = a;
+    ctx.fillStyle = "#ffb347";
+    ctx.beginPath();
+    ctx.arc(p.x, toScreenY(p.y), ballR * (0.25 + 0.55 * (i / n)), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawBall(){
+  if (game.mode === "dead") return;   // the ball bursts into particles
+  const b = game.ball;
+  const x = b.x, y = toScreenY(b.y);
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  // outer glow
+  ctx.shadowColor = "rgba(255,193,77,.95)";
+  ctx.shadowBlur = 30;
+
+  const g = ctx.createRadialGradient(-ballR * .35, -ballR * .4, ballR * .1,
+                                     0, 0, ballR);
+  g.addColorStop(0, "#fff3d0");
+  g.addColorStop(.5, "#ffc14d");
+  g.addColorStop(1, "#f08a1e");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(0, 0, ballR, 0, Math.PI * 2);
+  ctx.fill();
+
+  // spin markings, clipped to the sphere
+  ctx.shadowBlur = 0;
+  ctx.beginPath();
+  ctx.arc(0, 0, ballR, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.rotate(b.angle);
+  ctx.fillStyle = "rgba(120,52,0,.42)";
+  ctx.beginPath();
+  ctx.arc(0, -ballR * .5, ballR * .21, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(0, ballR * .5, ballR * .21, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(120,52,0,.22)";
+  ctx.fillRect(-ballR, -ballR * .07, ballR * 2, ballR * .14);
+  ctx.restore();
+}
+
+function drawFlash(){
+  if (game.flash <= 0) return;
+  ctx.save();
+  const a = game.flash * 0.5;
+  const g = ctx.createRadialGradient(W / 2, H * .6, W * .15, W / 2, H * .6, W * 1.1);
+  g.addColorStop(0, "rgba(255,77,125,0)");
+  g.addColorStop(1, `rgba(255,77,125,${a})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
+function render(){
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  // screen shake
+  if (game.shake > 0){
+    const s = game.shake * game.shake * W * 0.045;
+    ctx.translate(rand(-s, s), rand(-s, s));
+  }
+
+  drawBackground();
+  drawWalls();
+  drawObstacles();
+  if (game.mode === "playing") drawTrail();
+  Particles.draw(toScreenY);
+  drawBall();
+  drawFlash();
+}
+
+/* ==================================================================
+   5. Persistence
+   ================================================================== */
+
+const store = {
+  load(){
+    try { return parseInt(localStorage.getItem(C.STORE_KEY) || "0", 10) || 0; }
+    catch(e){ return 0; }
+  },
+  save(v){
+    try { localStorage.setItem(C.STORE_KEY, String(v)); } catch(e){}
+  }
+};
+
+/* ==================================================================
+   6. UI wiring
+   ================================================================== */
+
+const el = {
+  hud        : document.getElementById("hud"),
+  scoreWrap  : document.getElementById("scoreWrap"),
+  score      : document.getElementById("score"),
+  bestHud    : document.getElementById("bestHud"),
+  hint       : document.getElementById("hint"),
+  start      : document.getElementById("startScreen"),
+  over       : document.getElementById("overScreen"),
+  finalScore : document.getElementById("finalScore"),
+  bestScore  : document.getElementById("bestScore"),
+  newBest    : document.getElementById("newBest"),
+  playBtn    : document.getElementById("playBtn"),
+  againBtn   : document.getElementById("againBtn")
+};
+
+const ui = {
+  newBest: false,
+  hintTimer: 0,
+
+  setScore(v){
+    el.score.textContent = v;
+    if (REDUCED) return;
+    el.scoreWrap.classList.add("bump");
+    setTimeout(() => el.scoreWrap.classList.remove("bump"), 120);
+  },
+
+  showHint(){
+    el.hint.textContent = matchMedia("(pointer: coarse)").matches
+      ? "TAP TO SWITCH SIDES"
+      : "CLICK OR PRESS SPACE TO SWITCH SIDES";
+    el.hint.classList.add("show");
+    clearTimeout(this.hintTimer);
+    this.hintTimer = setTimeout(() => this.hideHint(), 3200);
+  },
+  hideHint(){ el.hint.classList.remove("show"); },
+
+  showOver(){
+    el.finalScore.textContent = game.score;
+    el.bestScore.textContent  = game.best;
+    el.newBest.textContent    = this.newBest ? "NEW BEST" : "";
+    el.bestHud.textContent    = game.best;
+    el.over.hidden = false;
+    el.hud.classList.add("dim");
+    el.againBtn.focus({ preventScroll: true });
+  }
+};
+
+function startGame(){
+  el.start.hidden = true;
+  el.over.hidden  = true;
+  el.hud.classList.remove("dim");
+  el.bestHud.textContent = game.best;
+  game.reset();
+  game.mode = "playing";
+  ui.showHint();
+}
+
+el.playBtn.addEventListener("click", e => { e.stopPropagation(); startGame(); });
+el.againBtn.addEventListener("click", e => { e.stopPropagation(); startGame(); });
+
+/* ==================================================================
+   7. Input — pointer, touch and keyboard
+   ================================================================== */
+
+function press(){
+  if (game.mode === "playing"){
+    game.switchSide();
+  } else if (game.mode === "dead"){
+    // brief lockout so the fatal tap does not instantly restart
+    if (performance.now() - game.deadAt > 650) startGame();
+  } else if (game.mode === "start"){
+    startGame();
+  }
+}
+
+window.addEventListener("pointerdown", e => {
+  if (e.target.tagName === "BUTTON") return;   // buttons handle themselves
+  e.preventDefault();
+  press();
+}, { passive: false });
+
+window.addEventListener("keydown", e => {
+  if (e.code === "Space" || e.code === "ArrowUp" || e.code === "Enter" ||
+      e.key === " "){
+    if (document.activeElement && document.activeElement.tagName === "BUTTON" &&
+        (e.code === "Enter" || e.code === "Space")){
+      return;  // let the focused button activate normally
+    }
+    e.preventDefault();
+    press();
+  }
+});
+
+// block scroll, pull-to-refresh and double-tap zoom on mobile
+["touchstart", "touchmove", "touchend", "gesturestart"].forEach(t => {
+  document.addEventListener(t, e => { if (e.cancelable) e.preventDefault(); },
+                            { passive: false });
+});
+document.addEventListener("contextmenu", e => e.preventDefault());
+
+// pause on tab blur so the ball is not lost off-screen
+document.addEventListener("visibilitychange", () => { last = 0; });
+
+/* ==================================================================
+   8. Main loop
+   ================================================================== */
+
+let last = 0;
+
+function frame(now){
+  if (!last) last = now;
+  let dt = (now - last) / 1000;
+  last = now;
+  dt = Math.min(dt, 1 / 30);       // clamp after tab switches / long frames
+
+  game.update(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+
+/* ==================================================================
+   9. Boot
+   ================================================================== */
+
+resize();
+game.best = store.load();
+el.bestHud.textContent = game.best;
+game.reset();            // builds a world so the start screen has a backdrop
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
