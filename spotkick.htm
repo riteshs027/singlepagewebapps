@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#061423">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Spot Kick — Penalty Shootout</title>
+<style>
+  :root{
+    --night:#061423;
+    --deep:#0c2137;
+    --panel:rgba(9,26,44,.78);
+    --chalk:#eef4f1;
+    --mute:#8fa9bd;
+    --blue:#3f7dff;
+    --red:#ff4f5f;
+    --gold:#ffd24a;
+    --grass:#38a25a;
+    --pad-h:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0;padding:0;height:100%;width:100%;
+    overflow:hidden;position:fixed;overscroll-behavior:none;
+    background:var(--night);color:var(--chalk);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    font-variant-numeric:tabular-nums;
+    touch-action:manipulation;
+    user-select:none;-webkit-user-select:none;
+  }
+  #app{
+    position:fixed;inset:0;display:flex;flex-direction:column;
+    height:100dvh;height:100vh;
+  }
+  @supports (height:100dvh){ #app{height:100dvh;} }
+
+  /* ---------- stage ---------- */
+  #stage{position:relative;flex:1 1 auto;min-height:0;overflow:hidden;}
+  #scene{display:block;width:100%;height:100%;}
+
+  /* ---------- scoreboard ---------- */
+  #hud{
+    position:absolute;left:0;right:0;top:0;
+    padding:calc(env(safe-area-inset-top) + 10px) 10px 0 10px;
+    display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:start;
+    pointer-events:none;
+  }
+  .team{
+    background:var(--panel);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.09);
+    border-radius:13px;padding:7px 10px 8px;
+    display:flex;flex-direction:column;gap:5px;
+    box-shadow:0 6px 18px rgba(0,0,0,.35);
+    transition:border-color .25s ease, box-shadow .25s ease, transform .25s ease;
+  }
+  .team.on{transform:translateY(1px);}
+  .team.on.blue{border-color:rgba(63,125,255,.85);box-shadow:0 0 0 1px rgba(63,125,255,.35),0 8px 22px rgba(0,0,0,.4);}
+  .team.on.red{border-color:rgba(255,79,95,.85);box-shadow:0 0 0 1px rgba(255,79,95,.35),0 8px 22px rgba(0,0,0,.4);}
+  .team.right{align-items:flex-end;}
+  .line{display:flex;align-items:baseline;gap:8px;}
+  .name{font-size:12px;font-weight:600;letter-spacing:.01em;color:var(--mute);}
+  .team.blue .name{color:#9dbcff;}
+  .team.red .name{color:#ffb0b8;}
+  .score{font-size:26px;font-weight:800;line-height:.9;letter-spacing:-.03em;}
+  .pips{display:flex;gap:4px;flex-wrap:wrap;max-width:132px;}
+  .team.right .pips{justify-content:flex-end;}
+  .pip{width:11px;height:11px;border-radius:50%;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.18);}
+  .pip.goal{background:var(--grass);border-color:#6ee89a;box-shadow:0 0 7px rgba(56,162,90,.75);}
+  .pip.save,.pip.miss{background:#5d1d26;border-color:#a33a48;}
+  .pip.miss{background:#40202a;}
+  #turnCard{
+    margin-top:2px;background:var(--panel);border:1px solid rgba(255,255,255,.09);
+    border-radius:11px;padding:6px 11px;text-align:center;min-width:104px;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  }
+  #roundText{font-size:11px;color:var(--mute);font-weight:600;}
+  #turnText{font-size:13px;font-weight:700;letter-spacing:-.01em;margin-top:1px;}
+
+  /* ---------- result banner ---------- */
+  #banner{
+    position:absolute;left:0;right:0;top:44%;transform:translateY(-50%);
+    text-align:center;pointer-events:none;opacity:0;
+  }
+  #banner .word{
+    display:inline-block;font-size:clamp(38px,13vw,86px);font-weight:800;
+    letter-spacing:-.045em;line-height:1;
+    text-shadow:0 8px 26px rgba(0,0,0,.6);
+  }
+  #banner .sub{display:block;margin-top:6px;font-size:13px;font-weight:600;color:var(--mute);}
+  #banner.show{animation:pop .5s cubic-bezier(.2,1.5,.4,1) forwards;}
+  @keyframes pop{
+    0%{opacity:0;transform:translateY(-50%) scale(.6);}
+    60%{opacity:1;transform:translateY(-50%) scale(1.04);}
+    100%{opacity:1;transform:translateY(-50%) scale(1);}
+  }
+  .goalc{color:var(--gold);} .savec{color:#7fd8ff;} .missc{color:#ff8b96;}
+
+  #commentary{
+    position:absolute;left:0;right:0;bottom:0;z-index:6;
+    padding:10px 14px 9px;text-align:center;pointer-events:none;
+    background:linear-gradient(to top, rgba(4,14,25,.82), rgba(4,14,25,0));
+    opacity:0;transition:opacity .3s ease;
+  }
+  #commentary.on{opacity:1;}
+  #commentaryText{
+    display:inline-block;font-size:13px;line-height:1.35;font-weight:600;
+    color:#cfe0ee;max-width:38ch;
+    transform:translateY(6px);transition:transform .3s ease;
+    text-shadow:0 2px 8px rgba(0,0,0,.75);
+  }
+  #commentary.on #commentaryText{transform:translateY(0);}
+
+  #howto{
+    list-style:none;margin:0;padding:0;max-width:36ch;text-align:left;
+    display:flex;flex-direction:column;gap:7px;
+  }
+  #howto li{
+    position:relative;padding-left:18px;font-size:13px;line-height:1.45;color:var(--mute);
+  }
+  #howto li::before{
+    content:"";position:absolute;left:0;top:7px;width:7px;height:7px;border-radius:50%;
+    background:var(--gold);opacity:.8;
+  }
+  #howto b{color:var(--chalk);font-weight:700;}
+
+  /* ---------- overlay ---------- */
+  #overlay{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;padding:24px;
+    background:radial-gradient(120% 80% at 50% 40%, rgba(6,20,35,.55), rgba(4,11,20,.94));
+    backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+    text-align:center;z-index:5;overflow:auto;
+  }
+  #overlay.hidden{display:none;}
+  #title{font-size:clamp(40px,12vw,68px);font-weight:800;letter-spacing:-.05em;line-height:.92;margin:0;}
+  #title span{display:block;}
+  #rule{width:64px;height:4px;border-radius:3px;background:var(--gold);}
+  #blurb{max-width:34ch;font-size:14px;line-height:1.5;color:var(--mute);margin:0;}
+  #finalScore{font-size:clamp(34px,11vw,56px);font-weight:800;letter-spacing:-.04em;}
+  #modes{display:flex;gap:6px;padding:5px;border-radius:15px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
+  .mode{
+    border:0;border-radius:11px;padding:11px 16px;cursor:pointer;
+    font-family:inherit;font-size:13px;font-weight:700;letter-spacing:-.01em;
+    background:transparent;color:var(--mute);transition:background .18s ease,color .18s ease;
+  }
+  .mode.on{background:var(--chalk);color:#0b1f33;}
+  .mode:focus-visible{outline:3px solid var(--gold);outline-offset:2px;}
+  .cta{
+    border:0;border-radius:16px;padding:16px 30px;
+    font-size:17px;font-weight:800;letter-spacing:.01em;
+    background:var(--gold);color:#1a1205;cursor:pointer;
+    box-shadow:0 8px 0 #b98d1d, 0 14px 26px rgba(0,0,0,.45);
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+  .cta:active{transform:translateY(5px);box-shadow:0 3px 0 #b98d1d, 0 8px 16px rgba(0,0,0,.4);}
+  .cta:focus-visible{outline:3px solid #fff;outline-offset:3px;}
+
+  /* ---------- control pad ---------- */
+  #pad{
+    flex:0 0 auto;
+    padding:10px var(--pad-h) calc(env(safe-area-inset-bottom) + 12px);
+    background:linear-gradient(to bottom, rgba(6,20,35,0), rgba(5,16,28,.9) 30%, #04101c);
+    display:flex;flex-direction:column;gap:8px;
+  }
+  #keys{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  .key{
+    position:relative;border:1px solid rgba(255,255,255,.1);
+    background:linear-gradient(#153252,#0d2439);
+    color:var(--chalk);border-radius:18px;
+    height:clamp(74px,13.5vh,104px);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    font-family:inherit;cursor:pointer;
+    box-shadow:0 6px 0 #071825, 0 12px 20px rgba(0,0,0,.4);
+    transition:transform .07s ease, box-shadow .07s ease, opacity .2s ease;
+  }
+  .key .glyph{font-size:26px;line-height:1;font-weight:700;display:flex;align-items:center;justify-content:center;height:26px;}
+  .tri{width:0;height:0;display:block;}
+  .tri.up{border-left:13px solid transparent;border-right:13px solid transparent;border-bottom:20px solid var(--chalk);}
+  .tri.left{border-top:13px solid transparent;border-bottom:13px solid transparent;border-right:20px solid var(--chalk);}
+  .tri.right{border-top:13px solid transparent;border-bottom:13px solid transparent;border-left:20px solid var(--chalk);}
+  .key .lab{font-size:13px;font-weight:700;letter-spacing:.02em;}
+  .key .hint{font-size:10px;color:var(--mute);font-weight:600;}
+  .key:active:not(:disabled){transform:translateY(6px);box-shadow:0 0 0 #071825, 0 6px 12px rgba(0,0,0,.35);}
+  .key:focus-visible{outline:3px solid var(--gold);outline-offset:3px;}
+  .key:disabled{opacity:.35;cursor:default;}
+  .key.armed{border-color:var(--gold);}
+  #prompt{text-align:center;font-size:12px;color:var(--mute);font-weight:600;min-height:15px;}
+
+  /* ---------- landscape ---------- */
+  @media (orientation:landscape){
+    #overlay{gap:10px;padding:14px;overflow:auto;}
+    #title{font-size:clamp(26px,7.5vh,44px);}
+    #blurb{font-size:12.5px;max-width:44ch;}
+    #howto{max-width:52ch;gap:4px;}
+    #howto li{font-size:12px;line-height:1.35;}
+    #commentary{padding:6px 12px;}
+    #commentaryText{font-size:12px;}
+    #rule{height:3px;width:48px;}
+    .mode{padding:9px 13px;font-size:12px;}
+    .cta{padding:13px 24px;font-size:15px;}
+    #app{flex-direction:row;}
+    #pad{
+      width:min(30vw,250px);justify-content:center;
+      padding:10px 12px calc(env(safe-area-inset-bottom) + 10px);
+      background:linear-gradient(to right, rgba(6,20,35,0), rgba(5,16,28,.92) 25%, #04101c);
+    }
+    #keys{grid-template-columns:1fr;gap:8px;}
+    .key{height:clamp(52px,16vh,76px);flex-direction:row;gap:10px;border-radius:14px;}
+    .key .glyph{font-size:21px;}
+    #hud{padding-top:calc(env(safe-area-inset-top) + 8px);}
+    .score{font-size:22px;}
+    #banner{top:42%;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    #banner.show{animation:none;opacity:1;}
+  }
+  #fallback{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:28px;text-align:center;color:var(--mute);font-size:14px;z-index:9;background:var(--night);}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="scene"></canvas>
+
+    <div id="hud" aria-live="polite">
+      <div class="team blue" id="teamA">
+        <div class="line"><span class="name" id="nameA">Blue</span><span class="score" id="scoreA">0</span></div>
+        <div class="pips" id="pipsA"></div>
+      </div>
+      <div id="turnCard">
+        <div id="roundText">Round 1 of 5</div>
+        <div id="turnText">Blue to shoot</div>
+      </div>
+      <div class="team red right" id="teamB">
+        <div class="line"><span class="score" id="scoreB">0</span><span class="name" id="nameB">Red</span></div>
+        <div class="pips" id="pipsB"></div>
+      </div>
+    </div>
+
+    <div id="commentary"><span id="commentaryText"></span></div>
+
+    <div id="banner"><span class="word" id="bannerWord"></span><span class="sub" id="bannerSub"></span></div>
+
+    <div id="overlay">
+      <h1 id="title"><span>Spot</span><span>Kick</span></h1>
+      <div id="rule"></div>
+      <p id="blurb">Five kicks each. Pick your corner, beat the keeper. Tap the pitch buttons, or use A, S and D on a keyboard.</p>
+      <div id="finalScore" style="display:none"></div>
+      <ul id="howto">
+        <li>Tap <b>LEFT</b>, <b>CENTER</b> or <b>RIGHT</b> to place your shot. On a keyboard, A, S and D.</li>
+        <li>In bot mode, when the bot steps up to kick, use the same buttons to dive your keeper.</li>
+        <li>Five kicks each. Still level after ten? Sudden death settles it.</li>
+      </ul>
+      <div id="modes" role="group" aria-label="Match mode">
+        <button class="mode" id="modePvp" aria-pressed="false">Two players</button>
+        <button class="mode on" id="modeBot" aria-pressed="true">Play the bot</button>
+      </div>
+      <button class="cta" id="ctaBtn">Start match</button>
+    </div>
+
+    <div id="fallback">Couldn't load the 3D library. Check your connection and reload.</div>
+  </div>
+
+  <div id="pad">
+    <div id="keys">
+      <button class="key" id="kLeft" disabled><span class="glyph"><span class="tri left"></span></span><span class="lab">LEFT</span><span class="hint">A</span></button>
+      <button class="key" id="kCenter" disabled><span class="glyph"><span class="tri up"></span></span><span class="lab">CENTER</span><span class="hint">S</span></button>
+      <button class="key" id="kRight" disabled><span class="glyph"><span class="tri right"></span></span><span class="lab">RIGHT</span><span class="hint">D</span></button>
+    </div>
+    <div id="prompt">Tap start to kick off</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+if (typeof THREE === "undefined") {
+  document.getElementById("fallback").style.display = "flex";
+  return;
+}
+
+/* =====================================================================
+   Constants & helpers
+   ===================================================================== */
+const GOAL_Z      = -11;      // goal line
+const GOAL_HW     = 3.66;     // half width
+const GOAL_H      = 2.44;
+const BALL_R      = 0.11;
+const SPOT        = new THREE.Vector3(0, BALL_R, 0);
+const UP          = new THREE.Vector3(0, 1, 0);
+const AIM_X       = { left: -2.45, center: 0, right: 2.45 };
+const SIGN        = { left: -1, center: 0, right: 1 };
+
+const clamp = (v, a, b) => v < a ? a : (v > b ? b : v);
+const lerp  = (a, b, t) => a + (b - a) * t;
+const rand  = (a, b) => a + Math.random() * (b - a);
+const ease  = t => t * t * (3 - 2 * t);
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+const damp  = (dt, k) => 1 - Math.exp(-k * dt);
+
+/* =====================================================================
+   Renderer / scene / camera
+   ===================================================================== */
+const canvas = document.getElementById("scene");
+const stage  = document.getElementById("stage");
+
+const lowPower = (navigator.hardwareConcurrency || 4) <= 4;
+const renderer = new THREE.WebGLRenderer({
+  canvas, antialias: !lowPower, powerPreference: "high-performance", alpha: false
+});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lowPower ? 1.5 : 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = lowPower ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+if (THREE.sRGBEncoding) renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.setClearColor(0x061423, 1);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x061423, 0.0125);
+
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 160);
+const camPos  = new THREE.Vector3(0, 3.2, 7.2);
+const camLook = new THREE.Vector3(0, 1.3, -4.5);
+const camPosT  = camPos.clone();
+const camLookT = camLook.clone();
+camera.position.copy(camPos);
+camera.lookAt(camLook);
+
+const H_HALF = THREE.MathUtils.degToRad(17.5);
+function resize(){
+  const w = Math.max(1, stage.clientWidth);
+  const h = Math.max(1, stage.clientHeight);
+  const aspect = w / h;
+  camera.aspect = aspect;
+  const vfov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(H_HALF) / aspect));
+  camera.fov = clamp(vfov, 38, 70);
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h, false);
+}
+window.addEventListener("resize", resize);
+window.addEventListener("orientationchange", () => setTimeout(resize, 120));
+if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
+
+/* =====================================================================
+   Lighting
+   ===================================================================== */
+scene.add(new THREE.HemisphereLight(0x9cc4ff, 0x14502c, 0.6));
+
+const sun = new THREE.DirectionalLight(0xffffff, 0.95);
+sun.position.set(7, 15, 8);
+sun.castShadow = true;
+sun.shadow.mapSize.set(lowPower ? 768 : 1024, lowPower ? 768 : 1024);
+sun.shadow.camera.left = -16; sun.shadow.camera.right = 16;
+sun.shadow.camera.top = 16;   sun.shadow.camera.bottom = -16;
+sun.shadow.camera.near = 2;   sun.shadow.camera.far = 45;
+sun.shadow.bias = -0.0009;
+sun.shadow.normalBias = 0.02;
+scene.add(sun, sun.target);
+sun.target.position.set(0, 0, -4);
+sun.target.updateMatrixWorld();
+
+const rim = new THREE.DirectionalLight(0xbfe0ff, 0.4);
+rim.position.set(-10, 9, -14);
+scene.add(rim);
+
+/* =====================================================================
+   Pitch
+   ===================================================================== */
+const matGrass  = new THREE.MeshLambertMaterial({ color: 0x2c8b4d });
+const matStripe = new THREE.MeshLambertMaterial({ color: 0x339a56 });
+const matLine   = new THREE.MeshLambertMaterial({ color: 0xe9f3ee });
+
+const pitch = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), matGrass);
+pitch.rotation.x = -Math.PI / 2;
+pitch.receiveShadow = true;
+scene.add(pitch);
+
+const stripeGeo = new THREE.PlaneGeometry(90, 4.2);
+for (let i = -6; i <= 7; i++){
+  if (i % 2) continue;
+  const s = new THREE.Mesh(stripeGeo, matStripe);
+  s.rotation.x = -Math.PI / 2;
+  s.position.set(0, 0.006, GOAL_Z + i * 4.2 + 2.1);
+  s.receiveShadow = true;
+  scene.add(s);
+}
+
+function line(w, d, x, z){
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), matLine);
+  m.rotation.x = -Math.PI / 2;
+  m.position.set(x, 0.012, z);
+  scene.add(m);
+  return m;
+}
+const LW = 0.12;
+line(60, LW, 0, GOAL_Z);                       // goal line
+line(LW, 16.5, -20.15, GOAL_Z + 8.25);         // box sides
+line(LW, 16.5,  20.15, GOAL_Z + 8.25);
+line(40.3, LW, 0, GOAL_Z + 16.5);              // box front
+line(LW, 5.5, -9.16, GOAL_Z + 2.75);           // six yard
+line(LW, 5.5,  9.16, GOAL_Z + 2.75);
+line(18.32, LW, 0, GOAL_Z + 5.5);
+
+const spotMesh = new THREE.Mesh(new THREE.CircleGeometry(0.16, 16), matLine);
+spotMesh.rotation.x = -Math.PI / 2;
+spotMesh.position.set(0, 0.014, 0);
+scene.add(spotMesh);
+
+// penalty arc (only the part outside the box)
+(function arc(){
+  const pts = [];
+  for (let i = 0; i <= 60; i++){
+    const a = -Math.PI * 0.5 + (i / 60) * Math.PI;
+    const x = Math.sin(a) * 9.15, z = Math.cos(a) * 9.15;
+    if (z > 5.5) pts.push(new THREE.Vector3(x, 0.014, z));
+  }
+  if (pts.length > 1){
+    const g = new THREE.BufferGeometry().setFromPoints(pts);
+    scene.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0xe9f3ee, transparent: true, opacity: 0.85 })));
+  }
+})();
+
+/* =====================================================================
+   Goal + net
+   ===================================================================== */
+const goal = new THREE.Group();
+scene.add(goal);
+const matPost = new THREE.MeshLambertMaterial({ color: 0xf6fbf8 });
+
+function post(x){
+  const p = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, GOAL_H, 10), matPost);
+  p.position.set(x, GOAL_H / 2, GOAL_Z);
+  p.castShadow = true;
+  goal.add(p);
+}
+post(-GOAL_HW); post(GOAL_HW);
+
+const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, GOAL_HW * 2 + 0.14, 10), matPost);
+bar.rotation.z = Math.PI / 2;
+bar.position.set(0, GOAL_H, GOAL_Z);
+bar.castShadow = true;
+goal.add(bar);
+
+const matNet = new THREE.MeshBasicMaterial({
+  color: 0xffffff, wireframe: true, transparent: true, opacity: 0.3, side: THREE.DoubleSide
+});
+const NET_D = 1.7;
+const netBack = new THREE.Mesh(new THREE.PlaneGeometry(GOAL_HW * 2, 2.9, 20, 9), matNet);
+netBack.position.set(0, 1.28, GOAL_Z - NET_D);
+netBack.rotation.x = -0.16;
+goal.add(netBack);
+
+const netTop = new THREE.Mesh(new THREE.PlaneGeometry(GOAL_HW * 2, NET_D, 20, 5), matNet);
+netTop.rotation.x = -Math.PI / 2;
+netTop.position.set(0, GOAL_H, GOAL_Z - NET_D / 2);
+goal.add(netTop);
+
+for (const s of [-1, 1]){
+  const side = new THREE.Mesh(new THREE.PlaneGeometry(NET_D, GOAL_H, 5, 7), matNet);
+  side.rotation.y = Math.PI / 2;
+  side.position.set(s * GOAL_HW, GOAL_H / 2, GOAL_Z - NET_D / 2);
+  goal.add(side);
+}
+
+/* =====================================================================
+   Stadium: stands, crowd, floodlights
+   ===================================================================== */
+const matStand = new THREE.MeshLambertMaterial({ color: 0x132a41 });
+const matWall  = new THREE.MeshLambertMaterial({ color: 0x0c1c2d });
+function box(mat, w, h, d, x, y, z){
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y, z);
+  scene.add(m);
+  return m;
+}
+
+/* One shared rake: every supporter stands on the step built from these numbers,
+   so the terracing can never end up in front of the people again. */
+const ROWS = 7, ROW_RISE = 0.82, ROW_STEP = 1.0, PERSON = 0.46;
+const END_Z0 = -19.5, SIDE_X0 = 25;
+const END_W = 60, SIDE_D = 48;
+const rowY   = r => 1.9 + r * ROW_RISE;                 // centre height of the people
+const rowEndZ = r => END_Z0 - r * ROW_STEP;
+const rowSideX = r => SIDE_X0 + r * ROW_STEP;
+
+for (let r = 0; r < ROWS; r++){
+  const h = rowY(r) - PERSON / 2;                        // step top = under their feet
+  box(matStand, END_W, h, ROW_STEP, 0, h / 2, rowEndZ(r));
+  box(matStand, ROW_STEP, h, SIDE_D, -rowSideX(r), h / 2, 0);
+  box(matStand, ROW_STEP, h,  SIDE_D, rowSideX(r), h / 2, 0);
+}
+// back walls close off the top of each bank
+const topY = rowY(ROWS - 1) + 1.6;
+box(matWall, END_W, 3.2, 0.8, 0, topY, rowEndZ(ROWS - 1) - 1.2);
+box(matWall, 0.8, 3.2, SIDE_D, -rowSideX(ROWS - 1) - 1.2, topY, 0);
+box(matWall, 0.8, 3.2, SIDE_D,  rowSideX(ROWS - 1) + 1.2, topY, 0);
+
+const Crowd = (function crowd(){
+  const geo = new THREE.BoxGeometry(0.46, 0.46, 0.46);
+  const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+  const rows = ROWS, endPer = 104, sidePer = 86;      // packed shoulder to shoulder
+  const total = rows * (endPer + sidePer * 2);
+  const mesh = new THREE.InstancedMesh(geo, mat, total);
+  const dummy = new THREE.Object3D();
+  const col = new THREE.Color();
+  const base = new Float32Array(total * 3);
+  const spin = new Float32Array(total);
+  const phase = new Float32Array(total);
+  let i = 0;
+  const place = (x, y, z) => {
+    base[i * 3] = x; base[i * 3 + 1] = y; base[i * 3 + 2] = z;
+    spin[i] = rand(-0.4, 0.4);
+    phase[i] = rand(0, Math.PI * 2);
+    dummy.position.set(x, y, z);
+    dummy.rotation.set(0, spin[i], 0);
+    dummy.updateMatrix();
+    mesh.setMatrixAt(i, dummy.matrix);
+    const pick = Math.random();
+    if (pick < 0.42) col.setHSL(0.6, 0.38, rand(0.34, 0.54));
+    else if (pick < 0.72) col.setHSL(0.02, 0.42, rand(0.34, 0.5));
+    else col.setHSL(rand(0, 1), 0.28, rand(0.28, 0.46));
+    mesh.setColorAt(i, col);
+    i++;
+  };
+  for (let r = 0; r < rows; r++){
+    const y = rowY(r), back = rowEndZ(r);
+    const stagger = (r % 2) * 0.28;                   // offset rows so nobody lines up exactly
+    for (let c = 0; c < endPer; c++){
+      const x = -END_W / 2 + 1 + (c / (endPer - 1)) * (END_W - 2) + stagger;
+      place(x + rand(-0.12, 0.12), y, back + rand(-0.12, 0.12));
+    }
+    for (let c = 0; c < sidePer; c++){
+      const z = -SIDE_D / 2 + 1 + (c / (sidePer - 1)) * (SIDE_D - 2) + stagger;
+      place(-rowSideX(r) + rand(-0.12, 0.12), y, z + rand(-0.12, 0.12));
+      place( rowSideX(r) + rand(-0.12, 0.12), y, z + rand(-0.12, 0.12));
+    }
+  }
+  const count = i;
+  mesh.count = count;
+  mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  scene.add(mesh);
+
+  let mood = 0;        // seconds of reaction left
+  let kind = "cheer";
+
+  return {
+    react(k, seconds){ kind = k; mood = seconds; },
+    update(dt, t){
+      if (mood <= 0) return;
+      mood -= dt;
+      const fade = clamp(mood / 0.6, 0, 1);
+      const jump = kind === "cheer" ? 0.34 * fade : 0.0;
+      const slump = kind === "cheer" ? 0 : 0.12 * fade;
+      for (let n = 0; n < count; n++){
+        const y = base[n * 3 + 1];
+        const hop = jump > 0
+          ? Math.abs(Math.sin(t * 7.5 + phase[n])) * jump
+          : -slump * (0.5 + 0.5 * Math.sin(t * 1.6 + phase[n]));
+        dummy.position.set(base[n * 3], y + hop, base[n * 3 + 2]);
+        dummy.rotation.set(0, spin[n] + (jump > 0 ? Math.sin(t * 4 + phase[n]) * 0.25 * fade : 0), 0);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(n, dummy.matrix);
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mood <= 0){   // settle everyone back down exactly where they started
+        for (let n = 0; n < count; n++){
+          dummy.position.set(base[n * 3], base[n * 3 + 1], base[n * 3 + 2]);
+          dummy.rotation.set(0, spin[n], 0);
+          dummy.updateMatrix();
+          mesh.setMatrixAt(n, dummy.matrix);
+        }
+        mesh.instanceMatrix.needsUpdate = true;
+      }
+    }
+  };
+})();
+
+(function floodlights(){
+  const poleMat = new THREE.MeshLambertMaterial({ color: 0x0b1b2b });
+  const lampMat = new THREE.MeshBasicMaterial({ color: 0xfff4cf });
+  const glowMat = new THREE.MeshBasicMaterial({ color: 0xfff1c0, transparent: true, opacity: 0.14 });
+  [[-32, -30], [32, -30], [-34, 14], [34, 14]].forEach(([x, z]) => {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, 14, 6), poleMat);
+    pole.position.set(x, 7, z);
+    scene.add(pole);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.1, 0.4), lampMat);
+    head.position.set(x, 14.2, z + (z < 0 ? 0.5 : -0.5));
+    head.lookAt(0, 1, -4);
+    scene.add(head);
+    const glow = new THREE.Mesh(new THREE.SphereGeometry(2.2, 8, 6), glowMat);
+    glow.position.copy(head.position);
+    scene.add(glow);
+  });
+})();
+
+/* =====================================================================
+   Stick figures
+   ===================================================================== */
+const SKIN = 0xe9b98c;
+
+function segment(len, rad, mat){
+  const joint = new THREE.Group();
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rad * 0.86, rad, len, 6), mat);
+  m.position.y = -len / 2;
+  m.castShadow = true;
+  joint.add(m);
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(rad, 6, 5), mat);
+  cap.position.y = -len;
+  cap.castShadow = true;
+  joint.add(cap);
+  joint.userData.end = -len;
+  return joint;
+}
+
+function buildPlayer(shirtHex, shortsHex, isKeeper){
+  const shirt  = new THREE.MeshLambertMaterial({ color: shirtHex });
+  const shorts = new THREE.MeshLambertMaterial({ color: shortsHex });
+  const skin   = new THREE.MeshLambertMaterial({ color: SKIN });
+
+  const root = new THREE.Group();
+  const hip  = new THREE.Group();
+  hip.position.y = 0.94;
+  root.add(hip);
+
+  // torso
+  const torso = new THREE.Group();
+  const tm = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.145, 0.6, 7), shirt);
+  tm.position.y = 0.3; tm.castShadow = true;
+  torso.add(tm);
+  hip.add(torso);
+
+  const neck = new THREE.Group();
+  neck.position.y = 0.6;
+  torso.add(neck);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.135, 10, 8), skin);
+  head.position.y = 0.14; head.castShadow = true;
+  neck.add(head);
+
+  // arms
+  const arms = {};
+  for (const s of [-1, 1]){
+    const up = segment(0.32, 0.055, shirt);
+    up.position.set(s * 0.19, 0.52, 0);
+    torso.add(up);
+    const fore = segment(0.32, 0.048, isKeeper ? new THREE.MeshLambertMaterial({ color: 0x1b2734 }) : skin);
+    fore.position.y = -0.32;
+    up.add(fore);
+    arms[s < 0 ? "L" : "R"] = { up, fore };
+  }
+
+  // legs
+  const legs = {};
+  for (const s of [-1, 1]){
+    const thigh = segment(0.47, 0.068, shorts);
+    thigh.position.set(s * 0.115, 0, 0);
+    hip.add(thigh);
+    const shin = segment(0.45, 0.056, skin);
+    shin.position.y = -0.47;
+    thigh.add(shin);
+    const boot = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.24), new THREE.MeshLambertMaterial({ color: 0x14202c }));
+    boot.position.set(0, -0.47, -0.06);
+    boot.castShadow = true;
+    shin.add(boot);
+    legs[s < 0 ? "L" : "R"] = { thigh, shin, boot };
+  }
+
+  return { root, hip, torso, neck, head, arms, legs, shirt, shorts };
+}
+
+const kicker = buildPlayer(0x3f7dff, 0xf0f4f8, false);
+kicker.root.position.set(0.62, 0, 2.6);
+kicker.root.rotation.y = 0.2;
+scene.add(kicker.root);
+
+const keeper = buildPlayer(0xffd24a, 0x1c2b3a, true);
+keeper.root.position.set(0, 0, GOAL_Z + 0.15);
+keeper.root.rotation.y = Math.PI;
+scene.add(keeper.root);
+
+/* =====================================================================
+   Ball
+   ===================================================================== */
+const ball = new THREE.Group();
+const ballCore = new THREE.Mesh(
+  new THREE.IcosahedronGeometry(BALL_R, 1),
+  new THREE.MeshLambertMaterial({ color: 0xffffff })
+);
+ballCore.castShadow = true;
+ball.add(ballCore);
+const ballLines = new THREE.LineSegments(
+  new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(BALL_R * 1.005, 1)),
+  new THREE.LineBasicMaterial({ color: 0x16202b })
+);
+ball.add(ballLines);
+ball.position.copy(SPOT);
+scene.add(ball);
+
+/* =====================================================================
+   Poses
+   ---------------------------------------------------------------------
+   Convention: a player's front is local -Z (that's where the boots point).
+   A limb hangs from its joint along -Y, so rotation.x > 0 swings the limb
+   FORWARD (toward the player's front) and rotation.x < 0 swings it BACK.
+   Knees bend backwards, so shin rotations stay negative.
+   ===================================================================== */
+function setLeg(leg, thighX, shinX){ leg.thigh.rotation.set(thighX, 0, 0); leg.shin.rotation.x = shinX; }
+/* upZ opens the arm sideways. The left arm hangs at local -X and the right at
+   +X, so a NEGATIVE upZ on the left and a POSITIVE upZ on the right spread the
+   arms away from the chest; the opposite signs fold them across the body. */
+function setArm(arm, upX, upZ, foreX){ arm.up.rotation.set(upX, 0, upZ); arm.fore.rotation.x = foreX; }
+
+function poseIdle(p, t, amp){
+  amp = amp === undefined ? 1 : amp;
+  const b = Math.sin(t * 2.2) * 0.04 * amp;
+  p.hip.position.y = 0.94 + b * 0.5;
+  p.torso.rotation.set(0.05 + b * 0.3, 0, 0);
+  p.neck.rotation.set(0.02, 0, 0);
+  setArm(p.arms.L, 0.12 + b, -0.22, 0.3);
+  setArm(p.arms.R, 0.12 - b, 0.22, 0.3);
+  setLeg(p.legs.L, 0.04 + b * 0.4, -0.12);
+  setLeg(p.legs.R, -0.04 - b * 0.4, -0.12);
+  p.root.rotation.z = 0;
+}
+
+function poseKeeperReady(k, t){
+  const b = Math.sin(t * 3.4);
+  k.hip.position.y = 0.88 + Math.abs(b) * 0.05;
+  k.torso.rotation.set(0.2, 0, 0);
+  setArm(k.arms.L, 0.45, -1.15 - b * 0.09, 0.75);
+  setArm(k.arms.R, 0.45, 1.15 + b * 0.09, 0.75);
+  setLeg(k.legs.L, 0.28, -0.5);
+  setLeg(k.legs.R, 0.28, -0.5);
+  k.root.rotation.set(0, Math.PI, 0);
+  k.root.position.set(0, 0, GOAL_Z + 0.15);
+}
+
+function poseRun(p, ph){
+  const s = Math.sin(ph), c = Math.cos(ph);
+  p.hip.position.y = 0.94 + Math.abs(c) * 0.05;
+  p.torso.rotation.set(0.18, 0, 0);
+  setLeg(p.legs.R,  s * 0.95, -Math.max(0, c) * 0.9 - 0.15);
+  setLeg(p.legs.L, -s * 0.95, -Math.max(0, -c) * 0.9 - 0.15);
+  setArm(p.arms.R, -s * 0.75, 0.25, 0.55);
+  setArm(p.arms.L,  s * 0.75, -0.25, 0.55);
+}
+
+/* strike: u 0..1 = plant, wind-up, swing (contact at CONTACT_U), follow-through */
+function poseStrike(p, u){
+  const back  = clamp(u / 0.4, 0, 1);
+  const swing = clamp((u - 0.32) / 0.45, 0, 1);
+  const sw = easeOut(swing);
+  const windUp = 0.95 * ease(back);              // kicking leg cocked behind
+  const legX = -windUp + (windUp + 1.35) * sw;   // swings through to the front
+  p.hip.position.y = 0.94 - 0.06 * Math.sin(u * Math.PI);
+  p.torso.rotation.set(0.26 - 0.4 * sw, 0.14 * sw, -0.16 * sw);
+  setLeg(p.legs.R, legX, -0.6 * (1 - sw) - 0.06);
+  setLeg(p.legs.L, 0.1 - 0.25 * ease(back), -0.22 - 0.3 * sw);
+  setArm(p.arms.L, 0.95 * sw + 0.2, -0.8, 0.5);
+  setArm(p.arms.R, -0.7 * sw, 0.6, 0.45);
+  p.root.rotation.z = 0.1 * sw;
+}
+
+/* dive: u 0..1. Feet push off sideways, the body rotates toward horizontal
+   about the feet, and the arms extend overhead in body space so they lead
+   the dive and point at the ball. */
+function poseDive(k, u, dir){
+  const e = easeOut(u);
+  const s = ease(u);
+
+  if (dir === 0){
+    const hop = Math.sin(Math.PI * Math.min(1, u * 1.1));
+    k.root.position.set(0, hop * 0.3, GOAL_Z + 0.15 + 0.22 * e);
+    k.root.rotation.set(0, Math.PI, 0);
+    k.hip.position.y = 0.9 - 0.08 * (1 - hop);
+    k.torso.rotation.set(0.1, 0, 0);
+    const starZ = 0.55 + 0.45 * e;          // hands thrown out wide, high and apart
+    setArm(k.arms.L, 2.55 * e, -starZ, 0.12 * (1 - e));
+    setArm(k.arms.R, 2.55 * e, starZ, 0.12 * (1 - e));
+    setLeg(k.legs.L, 0.1 + 0.3 * hop, -0.35 - 0.5 * hop);
+    setLeg(k.legs.R, 0.1 - 0.3 * hop, -0.35 - 0.5 * hop);
+    return;
+  }
+
+  const air   = Math.sin(Math.PI * Math.min(1, u * 0.9));   // still off the floor at full stretch
+  const push  = 1.2 * e;                                    // how far the feet travel sideways
+  const tilt  = 1.15 * s;                                   // body toward horizontal
+
+  k.root.position.set(dir * push, air * 0.5, GOAL_Z + 0.15 + 0.35 * e);
+  k.root.rotation.set(0, Math.PI, dir * tilt);   // +z lean tips the body toward +x in world space
+  k.hip.position.y = 0.92;
+  k.torso.rotation.set(0.12 * (1 - s), 0, 0);
+
+  // arms swing up past the head and stay locked out, so the hands lead the dive
+  const stretch = 2.85 * e;
+  const bend = 0.45 * (1 - easeOut(clamp(u / 0.55, 0, 1)));   // elbows straighten early
+  const spread = 0.18 + 0.34 * e;   // roughly a metre between the hands at full stretch
+  setArm(k.arms.L, stretch, -spread, bend);
+  setArm(k.arms.R, stretch, spread, bend);
+  setLeg(k.legs.L, 0.45 * e, -0.5 + 0.35 * e);
+  setLeg(k.legs.R, -0.15 * e, -0.28 + 0.1 * e);
+}
+
+/* =====================================================================
+   Audio (Web Audio API, created after first gesture)
+   ===================================================================== */
+const Sound = {
+  ctx: null,
+  noise: null,
+  crowdBuf: null,
+  amb: null,
+  init(){
+    if (this.ctx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    this.ctx = new AC();
+    const clen = Math.floor(this.ctx.sampleRate * 2);
+    const cbuf = this.ctx.createBuffer(1, clen, this.ctx.sampleRate);
+    const cd = cbuf.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < clen; i++){          // slightly smoothed noise = a room full of voices
+      const w = Math.random() * 2 - 1;
+      last = last * 0.6 + w * 0.4;
+      cd[i] = last;
+    }
+    this.crowdBuf = cbuf;
+    const len = Math.floor(this.ctx.sampleRate * 0.4);
+    const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    this.noise = buf;
+  },
+  resume(){ if (this.ctx && this.ctx.state === "suspended") this.ctx.resume(); },
+  tone(freq, dur, type, vol, slideTo, delay){
+    if (!this.ctx) return;
+    const t0 = this.ctx.currentTime + (delay || 0);
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = type || "sine";
+    o.frequency.setValueAtTime(freq, t0);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(30, slideTo), t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol || 0.18, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g).connect(this.ctx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.02);
+  },
+  burst(vol, dur, freq, delay){
+    if (!this.ctx || !this.noise) return;
+    const t0 = this.ctx.currentTime + (delay || 0);
+    const s = this.ctx.createBufferSource(); s.buffer = this.noise;
+    const f = this.ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = freq || 1400; f.Q.value = 0.9;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(vol || 0.2, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + (dur || 0.18));
+    s.connect(f).connect(g).connect(this.ctx.destination);
+    s.start(t0); s.stop(t0 + (dur || 0.18) + 0.02);
+  },
+  crowd(kind){
+    if (!this.ctx || !this.crowdBuf) return;
+    const t0 = this.ctx.currentTime;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.crowdBuf; src.loop = true;
+    const f = this.ctx.createBiquadFilter();
+    const g = this.ctx.createGain();
+    let dur;
+    if (kind === "cheer"){
+      src.playbackRate.value = 1.05;
+      f.type = "bandpass"; f.frequency.value = 1150; f.Q.value = 0.45;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.19, t0 + 0.16);
+      g.gain.exponentialRampToValueAtTime(0.11, t0 + 1.0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.3);
+      dur = 2.4;
+    } else {
+      src.playbackRate.value = 0.8;
+      f.type = "lowpass"; f.Q.value = 0.7;
+      f.frequency.setValueAtTime(760, t0);
+      f.frequency.exponentialRampToValueAtTime(240, t0 + 1.5);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.13, t0 + 0.22);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.7);
+      dur = 1.8;
+      this.tone(300, 1.0, "sawtooth", 0.05, 185);   // the groan on top of the murmur
+    }
+    src.connect(f).connect(g).connect(this.ctx.destination);
+    src.start(t0); src.stop(t0 + dur);
+  },
+  ambience(){
+    if (!this.ctx || !this.crowdBuf || this.amb) return;
+    const t0 = this.ctx.currentTime;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.crowdBuf; src.loop = true; src.playbackRate.value = 0.5;
+    const f = this.ctx.createBiquadFilter();
+    f.type = "lowpass"; f.frequency.value = 480; f.Q.value = 0.4;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.042, t0 + 2);
+    const swell = this.ctx.createOscillator();      // the murmur breathes a little
+    swell.type = "sine"; swell.frequency.value = 0.07;
+    const swellDepth = this.ctx.createGain();
+    swellDepth.gain.value = 0.016;
+    swell.connect(swellDepth).connect(g.gain);
+    swell.start(t0);
+    src.connect(f).connect(g).connect(this.ctx.destination);
+    src.start(t0);
+    this.amb = { src: src, gain: g, swell: swell };
+  },
+  peep(){ this.tone(2150, 0.2, "square", 0.075, 2450); },
+  kick(){ this.burst(0.28, 0.1, 1800); this.tone(150, 0.16, "triangle", 0.26, 55); },
+  save(){ this.burst(0.22, 0.14, 700); this.tone(90, 0.22, "square", 0.14, 48); },
+  goal(){
+    [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.24, "triangle", 0.16, null, i * 0.075));
+    this.burst(0.12, 0.5, 900, 0.05);
+  },
+  miss(){ this.tone(320, 0.35, "sawtooth", 0.13, 110); },
+  whistle(){
+    this.tone(2100, 0.16, "square", 0.08, 2400);
+    this.tone(2100, 0.16, "square", 0.08, 2400, 0.22);
+    this.tone(2100, 0.34, "square", 0.09, 2500, 0.44);
+  }
+};
+
+/* =====================================================================
+   Match state
+   ===================================================================== */
+const TEAMS = [
+  { name: "Blue", shirt: 0x3f7dff, shorts: 0xf0f4f8, cls: "blue" },
+  { name: "Red",  shirt: 0xff4f5f, shorts: 0x22303f, cls: "red"  }
+];
+
+/* In bot mode the human always takes Blue and the computer takes Red. */
+function teamName(i){ return (mode === "bot" && i === 1) ? "Bot" : TEAMS[i].name; }
+function isBotTurn(){ return mode === "bot" && match.turn === 1 && !match.finished; }
+
+const match = {
+  results: [[], []],
+  score: [0, 0],
+  turn: 0,
+  round: 0,
+  sudden: false,
+  finished: false,
+  winner: -1
+};
+
+let mode = "bot";       // bot = red is the computer (default), pvp = both sides on one device
+let botTimer = 0;
+
+let phase = "menu";     // menu | ready | runup | flight | settle | reset | over
+let phaseT = 0;
+let clockT = 0;
+let strikeU = 0;        // kicker swing progress, 0..1
+
+const shot = {
+  dir: "center", keeperDir: 0, outcome: "goal",
+  t: 0, dur: 0.78,
+  start: new THREE.Vector3(), end: new THREE.Vector3(),
+  curve: 0, arc: 0.5,
+  loose: false, vel: new THREE.Vector3(), announced: false,
+  keeperT: -1, keeperDelay: 0.09
+};
+
+const RUN_END   = 0.44;   // seconds of jogging before the plant
+const STRIKE_AT = 0.68;   // seconds into the run-up when boot meets ball
+const CONTACT_U = 0.46;   // poseStrike progress at the moment of contact
+
+/* ---------- UI refs ---------- */
+const ui = {
+  scoreA: document.getElementById("scoreA"),
+  scoreB: document.getElementById("scoreB"),
+  pipsA:  document.getElementById("pipsA"),
+  pipsB:  document.getElementById("pipsB"),
+  teamA:  document.getElementById("teamA"),
+  teamB:  document.getElementById("teamB"),
+  roundText: document.getElementById("roundText"),
+  turnText:  document.getElementById("turnText"),
+  banner: document.getElementById("banner"),
+  bannerWord: document.getElementById("bannerWord"),
+  bannerSub:  document.getElementById("bannerSub"),
+  overlay: document.getElementById("overlay"),
+  title: document.getElementById("title"),
+  rule: document.getElementById("rule"),
+  blurb: document.getElementById("blurb"),
+  finalScore: document.getElementById("finalScore"),
+  cta: document.getElementById("ctaBtn"),
+  nameA: document.getElementById("nameA"),
+  nameB: document.getElementById("nameB"),
+  modes: document.getElementById("modes"),
+  howto: document.getElementById("howto"),
+  commentary: document.getElementById("commentaryText"),
+  commentaryBar: document.getElementById("commentary"),
+  modePvp: document.getElementById("modePvp"),
+  modeBot: document.getElementById("modeBot"),
+  prompt: document.getElementById("prompt"),
+  keys: {
+    left: document.getElementById("kLeft"),
+    center: document.getElementById("kCenter"),
+    right: document.getElementById("kRight")
+  }
+};
+
+/* ---------- commentary ---------- */
+const LINES = {
+  stepUp: [
+    "{t} places the ball on the spot.",
+    "{t} steps up. The stadium holds its breath.",
+    "All eyes on {t} from twelve yards.",
+    "{t} picks a spot and backs away."
+  ],
+  botStepUp: [
+    "The bot marches in without a flicker of doubt. Dive when you're ready.",
+    "No nerves in the machine. Choose your dive.",
+    "The bot sets itself. Pick a corner to guard."
+  ],
+  goal: [
+    "Buried! The keeper never moved a muscle.",
+    "Side netting, and the crowd is up!",
+    "Cool as you like. Straight past the dive.",
+    "Too clean, too quick. It's in."
+  ],
+  goalTight: [
+    "Through the gloves! The keeper got a hand there.",
+    "Off the keeper's fingertips and in!"
+  ],
+  save: [
+    "Saved! Full stretch, and the hands held firm.",
+    "Read it perfectly. What a stop.",
+    "Flying low to the corner and it stays out!",
+    "The keeper guessed right and made it count."
+  ],
+  miss: [
+    "Dragged wide. He can't watch.",
+    "Over the bar and into the seats.",
+    "Wild. That one's still climbing.",
+    "Row Z. A miserable moment."
+  ],
+  sudden: ["Sudden death. One kick can end it now."],
+  decided: ["{t} wins it. The shootout is over."]
+};
+function say(key, team){
+  const pool = LINES[key];
+  if (!pool) return;
+  const text = pool[Math.floor(Math.random() * pool.length)].replace("{t}", team || "");
+  ui.commentaryBar.classList.remove("on");
+  window.setTimeout(() => {
+    ui.commentary.textContent = text;
+    ui.commentaryBar.classList.add("on");
+  }, 60);
+}
+function clearSay(){ ui.commentaryBar.classList.remove("on"); }
+
+function renderPips(){
+  const total = match.sudden ? Math.max(5, match.round + 1) : 5;
+  [0, 1].forEach(i => {
+    const host = i === 0 ? ui.pipsA : ui.pipsB;
+    const res = match.results[i];
+    const n = Math.max(total, res.length);
+    let html = "";
+    for (let k = 0; k < n; k++){
+      const r = res[k];
+      html += '<span class="pip' + (r ? " " + r : "") + '"></span>';
+    }
+    host.innerHTML = html;
+  });
+}
+
+function renderHUD(){
+  ui.scoreA.textContent = match.score[0];
+  ui.scoreB.textContent = match.score[1];
+  ui.teamA.classList.toggle("on", !match.finished && match.turn === 0 && phase !== "menu");
+  ui.teamB.classList.toggle("on", !match.finished && match.turn === 1 && phase !== "menu");
+  if (match.finished){
+    ui.roundText.textContent = "Full time";
+    ui.turnText.textContent = match.winner < 0 ? "Draw" : teamName(match.winner) + " wins";
+  } else if (match.sudden){
+    ui.roundText.textContent = "Sudden death";
+    ui.turnText.textContent = "Round " + (match.round - 4) + " · " + teamName(match.turn);
+  } else {
+    ui.roundText.textContent = "Round " + (match.round + 1) + " of 5";
+    ui.turnText.textContent = teamName(match.turn) + " to shoot";
+  }
+  renderPips();
+}
+
+function setKeys(enabled){
+  Object.values(ui.keys).forEach(b => { b.disabled = !enabled; });
+}
+
+function announceTurn(){
+  Sound.peep();
+  const name = teamName(match.turn);
+  if (match.sudden) say("sudden");
+  else if (isBotTurn()) say("botStepUp", name);
+  else say("stepUp", name);
+}
+
+function promptForTurn(){
+  if (isBotTurn()) return "Bot is ready to kick — choose where to dive";
+  if (mode === "bot") return "Your kick — pick a corner";
+  return teamName(match.turn) + " — pick your corner";
+}
+
+function setMode(next){
+  mode = next;
+  ui.modePvp.classList.toggle("on", mode === "pvp");
+  ui.modeBot.classList.toggle("on", mode === "bot");
+  ui.modePvp.setAttribute("aria-pressed", mode === "pvp");
+  ui.modeBot.setAttribute("aria-pressed", mode === "bot");
+  ui.nameA.textContent = teamName(0);
+  ui.nameB.textContent = teamName(1);
+  ui.blurb.textContent = mode === "bot"
+    ? "You take Blue and shoot. When the bot shoots at you, use the same buttons to dive your keeper."
+    : "Blue and Red, taking turns on the same device.";
+}
+
+function showBanner(word, sub, cls){
+  ui.bannerWord.textContent = word;
+  ui.bannerWord.className = "word " + cls;
+  ui.bannerSub.textContent = sub || "";
+  ui.banner.classList.remove("show");
+  void ui.banner.offsetWidth;
+  ui.banner.classList.add("show");
+}
+function hideBanner(){ ui.banner.classList.remove("show"); }
+
+/* =====================================================================
+   Shot resolution
+   ===================================================================== */
+function botPick(){
+  const r = Math.random();
+  if (r < 0.4) return "left";
+  if (r < 0.8) return "right";
+  return "center";
+}
+
+function chooseKeeperDir(){
+  const r = Math.random();
+  if (r < 0.38) return -1;
+  if (r < 0.76) return 1;
+  return 0;
+}
+
+/* dir: the shooter's chosen side (string). keeperDirOverride: numeric -1/0/1,
+   supplied when a human is controlling the goalkeeper's dive (bot's turn to
+   kick in bot mode). When omitted, the keeper dives on its own (AI defense). */
+function beginKick(dir, keeperDirOverride){
+  if (phase !== "ready" || match.finished) return;
+  Sound.init(); Sound.resume();
+
+  shot.dir = dir;
+  shot.keeperDir = (keeperDirOverride !== undefined) ? keeperDirOverride : chooseKeeperDir();
+  shot.announced = false;
+  shot.loose = false;
+  shot.t = 0;
+  shot.keeperT = -1;
+  shot.keeperDelay = rand(0.05, 0.16);
+  strikeU = 0;
+  botTimer = 0;
+
+  const sgn = SIGN[dir];
+  const missRoll = Math.random();
+  const sameSide = shot.keeperDir === sgn;
+
+  let outcome;
+  if (missRoll < 0.11) outcome = "miss";
+  else if (sameSide) outcome = Math.random() < 0.76 ? "save" : "goal";
+  else outcome = "goal";
+  shot.outcome = outcome;
+
+  // aim point
+  let ex, ey, ez = GOAL_Z;
+  if (outcome === "miss"){
+    if (Math.random() < 0.58){
+      const s = sgn !== 0 ? sgn : (Math.random() < 0.5 ? -1 : 1);
+      ex = s * rand(4.1, 5.0);
+      ey = rand(0.8, 2.1);
+    } else {
+      ex = AIM_X[dir] + rand(-0.8, 0.8);
+      ey = rand(2.95, 3.6);
+    }
+    ez = GOAL_Z - 1.2;
+  } else if (outcome === "save"){
+    ex = AIM_X[dir] + rand(-0.3, 0.3) * (sgn === 0 ? 0.4 : 1);
+    ey = rand(0.3, 0.95);
+  } else {
+    ex = AIM_X[dir] + rand(-0.45, 0.45) * (sgn === 0 ? 0.35 : 1);
+    ex = clamp(ex, -GOAL_HW + 0.35, GOAL_HW - 0.35);
+    ey = rand(0.45, 1.85);
+  }
+
+  shot.start.copy(SPOT);
+  shot.end.set(ex, ey, ez);
+  shot.curve = (sgn !== 0 ? -sgn : (Math.random() < 0.5 ? -1 : 1)) * rand(0.55, 1.25);
+  shot.arc = clamp(0.62 - ey * 0.12, 0.16, 0.7);
+  shot.dur = rand(0.72, 0.86);
+
+  phase = "runup";
+  phaseT = 0;
+  setKeys(false);
+  hideBanner();
+  clearSay();
+  const armedDir = (keeperDirOverride !== undefined)
+    ? (keeperDirOverride === -1 ? "left" : (keeperDirOverride === 1 ? "right" : "center"))
+    : dir;
+  const btn = ui.keys[armedDir];
+  if (btn){
+    btn.classList.add("armed");
+    setTimeout(() => btn.classList.remove("armed"), 600);
+  }
+  ui.prompt.textContent = (keeperDirOverride !== undefined) ? "Diving…" : "Here we go…";
+}
+
+function pathAt(t, out){
+  const s = Math.sin(Math.PI * clamp(t, 0, 1));
+  out.x = lerp(shot.start.x, shot.end.x, t) + shot.curve * s;
+  out.y = lerp(shot.start.y, shot.end.y, t) + shot.arc * Math.sin(Math.PI * Math.pow(clamp(t, 0, 1), 0.85));
+  out.z = lerp(shot.start.z, shot.end.z, t);
+  if (out.y < BALL_R) out.y = BALL_R;
+  return out;
+}
+
+const tmpA = new THREE.Vector3(), tmpB = new THREE.Vector3(), tmpAxis = new THREE.Vector3();
+
+function goLoose(kind){
+  shot.loose = true;
+  pathAt(0.985, tmpA); pathAt(1.0, tmpB);
+  const dirV = tmpB.clone().sub(tmpA).normalize();
+  const speed = Math.max(4, shot.start.distanceTo(shot.end) / shot.dur);
+  if (kind === "save"){
+    const away = shot.keeperDir !== 0 ? shot.keeperDir : (Math.random() < 0.5 ? -1 : 1);
+    shot.vel.set(away * rand(3.5, 6), rand(2.2, 4.2), rand(4.5, 7.5));
+  } else if (kind === "goal"){
+    shot.vel.copy(dirV).multiplyScalar(speed * 0.22);
+    shot.vel.y = Math.min(shot.vel.y, 0.6);
+  } else {
+    shot.vel.copy(dirV).multiplyScalar(speed * 0.45);
+  }
+}
+
+function announce(){
+  if (shot.announced) return;
+  shot.announced = true;
+  const team = teamName(match.turn);
+  if (shot.outcome === "goal"){
+    showBanner("GOAL!", team + " score", "goalc");
+    Sound.goal();
+    Sound.crowd("cheer");
+    Crowd.react("cheer", 2.2);
+    say(shot.keeperDir === SIGN[shot.dir] ? "goalTight" : "goal", team);
+  } else if (shot.outcome === "save"){
+    showBanner("SAVED!", "Keeper goes the right way", "savec");
+    Sound.save();
+    Sound.crowd("groan");
+    Crowd.react("groan", 1.6);
+    say("save", team);
+  } else {
+    showBanner("MISS!", "Off target", "missc");
+    Sound.miss();
+    Sound.crowd("groan");
+    Crowd.react("groan", 1.6);
+    say("miss", team);
+  }
+  recordResult(shot.outcome);
+}
+
+/* =====================================================================
+   Scoring & progression
+   ===================================================================== */
+function shotsTaken(i){ return match.results[i].length; }
+
+function recordResult(outcome){
+  const i = match.turn;
+  match.results[i].push(outcome);
+  if (outcome === "goal") match.score[i]++;
+  renderHUD();
+  evaluateMatch();
+}
+
+function evaluateMatch(){
+  const a = match.score[0], b = match.score[1];
+  const ta = shotsTaken(0), tb = shotsTaken(1);
+
+  if (!match.sudden && (ta < 5 || tb < 5)){
+    const remA = Math.max(0, 5 - ta), remB = Math.max(0, 5 - tb);
+    if (a > b + remB){ finish(0); return; }
+    if (b > a + remA){ finish(1); return; }
+    return;
+  }
+  if (ta === tb){
+    if (a !== b){ finish(a > b ? 0 : 1); return; }
+    match.sudden = true;
+  }
+}
+
+function finish(winner){
+  match.finished = true;
+  match.winner = winner;
+}
+
+function nextTurn(){
+  if (match.turn === 0){
+    match.turn = 1;
+  } else {
+    match.turn = 0;
+    match.round++;
+  }
+  renderHUD();
+}
+
+function resetMatch(){
+  match.results = [[], []];
+  match.score = [0, 0];
+  match.turn = 0;
+  match.round = 0;
+  match.sudden = false;
+  match.finished = false;
+  match.winner = -1;
+  renderHUD();
+}
+
+function applyTeamColours(){
+  const t = TEAMS[match.turn];
+  kicker.shirt.color.setHex(t.shirt);
+  kicker.shorts.color.setHex(t.shorts);
+}
+
+function resetForNextKick(){
+  ball.position.copy(SPOT);
+  ball.rotation.set(0, 0, 0);
+  shot.loose = false;
+  shot.t = 0;
+  kicker.root.position.set(0.62, 0, 2.6);
+  kicker.root.rotation.set(0, 0.2, 0);
+  keeper.root.position.set(0, 0, GOAL_Z + 0.15);
+  keeper.root.rotation.set(0, Math.PI, 0);
+  applyTeamColours();
+}
+
+/* =====================================================================
+   Overlay / flow control
+   ===================================================================== */
+function showMenu(){
+  phase = "menu";
+  ui.overlay.classList.remove("hidden");
+  ui.title.style.display = "";
+  ui.rule.style.display = "";
+  ui.blurb.style.display = "";
+  ui.finalScore.style.display = "none";
+  ui.cta.textContent = "Start match";
+  ui.howto.style.display = "";
+  ui.modes.style.display = "";
+  setMode(mode);
+  setKeys(false);
+  ui.prompt.textContent = "Tap start to kick off";
+  clearSay();
+  hideBanner();
+}
+
+function showResultScreen(){
+  phase = "over";
+  setKeys(false);
+  const w = match.winner;
+  ui.overlay.classList.remove("hidden");
+  ui.title.style.display = "none";
+  ui.rule.style.display = "";
+  ui.blurb.style.display = "";
+  ui.howto.style.display = "none";
+  ui.modes.style.display = "";
+  ui.finalScore.style.display = "";
+  ui.finalScore.textContent = match.score[0] + " – " + match.score[1];
+  ui.finalScore.style.color = w === 0 ? "#3f7dff" : (w === 1 ? "#ff4f5f" : "#eef4f1");
+  ui.blurb.textContent = w < 0
+    ? "All square. Nobody blinked."
+    : (mode === "bot"
+        ? (w === 0 ? "You win the shootout" : "The bot wins the shootout")
+        : teamName(w) + " wins the shootout") + (match.sudden ? " in sudden death." : ".");
+  ui.cta.textContent = "Play again";
+  ui.prompt.textContent = "Match over";
+  say("decided", w < 0 ? "Nobody" : teamName(w));
+  Sound.whistle();
+  Sound.crowd("cheer");
+  Crowd.react("cheer", 3);
+}
+
+function startMatch(){
+  Sound.init(); Sound.resume(); Sound.ambience();
+  resetMatch();
+  setMode(mode);
+  ui.overlay.classList.add("hidden");
+  resetForNextKick();
+  phase = "ready";
+  phaseT = 0;
+  botTimer = 0;
+  setKeys(true);
+  ui.prompt.textContent = promptForTurn();
+  Sound.whistle();
+  window.setTimeout(() => { if (phase === "ready") announceTurn(); }, 950);
+}
+
+ui.modePvp.addEventListener("click", () => { if (phase === "menu" || phase === "over") setMode("pvp"); });
+ui.modeBot.addEventListener("click", () => { if (phase === "menu" || phase === "over") setMode("bot"); });
+
+ui.cta.addEventListener("click", () => {
+  if (phase === "menu" || phase === "over") startMatch();
+});
+
+/* ---------- input ----------
+   Same three buttons serve double duty: when it is the human's turn to
+   shoot, a press picks the shot's side. When the bot is taking its turn
+   (bot mode only), a press instead picks which way the goalkeeper dives,
+   and the bot's own shot direction is chosen for it under the hood. */
+function bindKey(btn, dir){
+  const fire = e => {
+    e.preventDefault();
+    if (btn.disabled) return;
+    if (isBotTurn()){
+      beginKick(botPick(), SIGN[dir]);
+    } else {
+      beginKick(dir);
+    }
+  };
+  btn.addEventListener("pointerdown", fire);
+  btn.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") fire(e);
+  });
+}
+bindKey(ui.keys.left, "left");
+bindKey(ui.keys.center, "center");
+bindKey(ui.keys.right, "right");
+
+window.addEventListener("keydown", e => {
+  const k = e.key.toLowerCase();
+  if ((phase === "menu" || phase === "over") && (k === " " || k === "enter")){
+    e.preventDefault(); startMatch(); return;
+  }
+  if (phase !== "ready") return;
+  let dir = null;
+  if (k === "a" || k === "arrowleft") dir = "left";
+  else if (k === "s" || k === "arrowup" || k === "arrowdown") dir = "center";
+  else if (k === "d" || k === "arrowright") dir = "right";
+  if (!dir) return;
+  e.preventDefault();
+  if (isBotTurn()) beginKick(botPick(), SIGN[dir]);
+  else beginKick(dir);
+});
+
+window.addEventListener("pointerdown", () => { Sound.init(); Sound.resume(); Sound.ambience(); }, { once: true });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) Sound.resume(); });
+
+/* =====================================================================
+   Camera direction
+   ===================================================================== */
+function updateCameraTargets(dt){
+  const portrait = camera.aspect < 1;
+  const baseZ = portrait ? 6.6 : 7.4;
+  const baseY = portrait ? 3.15 : 3.0;
+
+  if (phase === "menu"){
+    const a = clockT * 0.12;
+    camPosT.set(Math.sin(a) * 6.2, 3.4 + Math.sin(a * 0.7) * 0.4, 5.0 + Math.cos(a) * 2.4);
+    camLookT.set(0, 1.3, -5.5);
+  } else if (phase === "ready"){
+    camPosT.set(0.35, baseY, baseZ);
+    camLookT.set(0, 1.25, -4.6);
+  } else if (phase === "runup"){
+    camPosT.set(0.25, baseY - 0.25, baseZ - 1.0);
+    camLookT.set(0, 1.2, -5.0);
+  } else if (phase === "flight"){
+    camPosT.set(shot.curve * -0.25, 2.5, shot.loose ? 2.2 : 3.6);
+    camLookT.set(ball.position.x * 0.55, clamp(ball.position.y, 0.8, 2.2), -7.5);
+  } else if (phase === "settle"){
+    if (shot.outcome === "goal"){
+      camPosT.set(1.6, 2.2, 0.2);
+      camLookT.set(ball.position.x * 0.4, 1.3, GOAL_Z - 0.6);
+    } else {
+      camPosT.set(shot.keeperDir * 1.6, 2.1, 1.0);
+      camLookT.set(keeper.root.position.x * 0.7, 1.0, GOAL_Z + 0.2);
+    }
+  } else if (phase === "over"){
+    const a = clockT * 0.15;
+    camPosT.set(Math.sin(a) * 5.5, 3.2, -1.5 + Math.cos(a) * 4.5);
+    camLookT.set(0, 1.3, GOAL_Z + 1);
+  } else { // reset
+    camPosT.set(0.35, baseY, baseZ);
+    camLookT.set(0, 1.25, -4.6);
+  }
+
+  const k = damp(dt, phase === "flight" ? 4.2 : 2.6);
+  camPos.lerp(camPosT, k);
+  camLook.lerp(camLookT, k);
+  camera.position.copy(camPos);
+  camera.lookAt(camLook);
+}
+
+/* =====================================================================
+   Main loop
+   ===================================================================== */
+const clock = new THREE.Clock();
+let prevBall = new THREE.Vector3().copy(ball.position);
+
+function spinBall(dt){
+  tmpA.subVectors(ball.position, prevBall);
+  const d = tmpA.length();
+  if (d > 1e-5){
+    tmpAxis.crossVectors(UP, tmpA).normalize();
+    if (isFinite(tmpAxis.x)) ball.rotateOnWorldAxis(tmpAxis, Math.min(0.6, d / BALL_R * 0.55));
+    ball.rotateOnWorldAxis(UP, shot.curve * dt * 2.2);
+  }
+  prevBall.copy(ball.position);
+}
+
+function tick(){
+  requestAnimationFrame(tick);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  clockT += dt;
+  phaseT += dt;
+
+  try {
+  /* ---- keeper ---- */
+  if (phase === "flight" || phase === "settle"){
+    if (shot.keeperT >= 0){
+      shot.keeperT = Math.min(1, shot.keeperT + dt / 0.62);
+      poseDive(keeper, shot.keeperT, shot.keeperDir);
+    } else {
+      poseKeeperReady(keeper, clockT);
+    }
+  } else if (phase !== "reset"){
+    poseKeeperReady(keeper, clockT);
+  }
+
+  /* ---- phases ---- */
+  if (phase === "menu"){
+    poseIdle(kicker, clockT);
+    kicker.root.position.z = 2.6 + Math.sin(clockT * 0.6) * 0.05;
+  }
+  else if (phase === "ready"){
+    poseIdle(kicker, clockT);
+    // In bot mode, when it's the bot's turn to kick, play simply waits here
+    // until the human presses a button to choose the keeper's dive.
+  }
+  else if (phase === "runup"){
+    const t = phaseT;
+    if (t < RUN_END){
+      const u = t / RUN_END;
+      kicker.root.position.x = lerp(0.62, 0.05, ease(u));
+      kicker.root.position.z = lerp(2.6, 0.72, ease(u));
+      kicker.root.rotation.y = lerp(0.2, 0.06, ease(u));
+      poseRun(kicker, u * Math.PI * 3.2);
+      strikeU = 0;
+    } else {
+      const u = clamp((t - RUN_END) / (STRIKE_AT - RUN_END), 0, 1);
+      strikeU = u * CONTACT_U;
+      kicker.root.position.x = lerp(0.05, -0.08, easeOut(u));
+      kicker.root.position.z = lerp(0.72, 0.52, easeOut(u));
+      poseStrike(kicker, strikeU);
+    }
+    if (t >= STRIKE_AT){
+      Sound.kick();
+      phase = "flight";
+      phaseT = t - STRIKE_AT;
+      shot.t = phaseT / shot.dur;
+      shot.keeperT = -shot.keeperDelay;
+    }
+  }
+  else if (phase === "flight"){
+    // keeper reaction delay countdown
+    if (shot.keeperT < 0){
+      shot.keeperT += dt;
+      if (shot.keeperT >= 0) shot.keeperT = 0;
+    }
+    // kicker follow-through then drift forward
+    strikeU = Math.min(1, strikeU + dt / 0.32);
+    poseStrike(kicker, strikeU);
+    kicker.root.position.z = lerp(kicker.root.position.z, 0.15, damp(dt, 2.2));
+
+    if (!shot.loose){
+      shot.t += dt / shot.dur;
+      const contact = shot.outcome === "save" ? 0.92 : 1.0;
+      if (shot.t >= contact){
+        shot.t = contact;
+        pathAt(shot.t, tmpB);
+        ball.position.copy(tmpB);
+        announce();
+        goLoose(shot.outcome);
+        phase = "settle";
+        phaseT = 0;
+      } else {
+        pathAt(shot.t, tmpB);
+        ball.position.copy(tmpB);
+      }
+    }
+    spinBall(dt);
+  }
+  else if (phase === "settle"){
+    strikeU = Math.min(1, strikeU + dt / 0.32);
+    poseStrike(kicker, strikeU);
+    // loose-ball physics
+    shot.vel.y -= 15 * dt;
+    ball.position.addScaledVector(shot.vel, dt);
+    if (ball.position.y < BALL_R){
+      ball.position.y = BALL_R;
+      shot.vel.y *= -0.42;
+      shot.vel.x *= 0.78; shot.vel.z *= 0.78;
+      if (Math.abs(shot.vel.y) < 0.4) shot.vel.y = 0;
+    }
+    if (ball.position.z < GOAL_Z - NET_D + 0.15 && Math.abs(ball.position.x) < GOAL_HW && ball.position.y < GOAL_H){
+      ball.position.z = GOAL_Z - NET_D + 0.15;
+      shot.vel.z *= -0.18; shot.vel.x *= 0.5; shot.vel.y *= 0.5;
+    }
+    spinBall(dt);
+
+    if (phaseT > 1.75){
+      hideBanner();
+      if (match.finished){
+        phase = "reset";
+        phaseT = 0;
+      } else {
+        nextTurn();
+        phase = "reset";
+        phaseT = 0;
+      }
+    }
+  }
+  else if (phase === "reset"){
+    poseIdle(kicker, clockT, 0.4);
+    if (phaseT > 0.55){
+      if (match.finished){
+        showResultScreen();
+      } else {
+        resetForNextKick();
+        prevBall.copy(ball.position);
+        phase = "ready";
+        phaseT = 0;
+        botTimer = 0;
+        setKeys(true);
+        ui.prompt.textContent = promptForTurn();
+        renderHUD();
+        announceTurn();
+      }
+    }
+  }
+  else if (phase === "over"){
+    poseIdle(kicker, clockT, 0.6);
+  }
+
+  } catch (err) {
+    if (!tick.warned){ tick.warned = true; console.error("frame error:", err); }
+    if (phase === "runup" && phaseT > 2) { phase = "ready"; phaseT = 0; setKeys(true); }
+  }
+
+  Crowd.update(dt, clockT);
+  updateCameraTargets(dt);
+  renderer.render(scene, camera);
+}
+
+/* =====================================================================
+   Boot
+   ===================================================================== */
+resize();
+resetForNextKick();
+renderHUD();
+showMenu();
+tick();
+
+})();
+</script>
+</body>
+</html>
