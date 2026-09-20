@@ -1,0 +1,1769 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#070915" />
+  <title>Fidget Tools - Cure Boredom</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070915;
+      --panel: rgba(17, 22, 45, 0.66);
+      --panel-strong: rgba(15, 19, 38, 0.88);
+      --line: rgba(255, 255, 255, 0.11);
+      --text: #f6f7ff;
+      --muted: #aab1cb;
+      --cyan: #56f2ff;
+      --violet: #9b74ff;
+      --pink: #ff5ecb;
+      --green: #6effbd;
+      --shadow: 0 26px 80px rgba(0, 0, 0, 0.45);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-width: 300px;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 15% 10%, rgba(82, 66, 255, 0.20), transparent 32rem),
+        radial-gradient(circle at 88% 18%, rgba(255, 54, 177, 0.15), transparent 30rem),
+        radial-gradient(circle at 50% 110%, rgba(41, 228, 255, 0.12), transparent 38rem),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    button, canvas { -webkit-tap-highlight-color: transparent; }
+
+    button {
+      font: inherit;
+      color: inherit;
+    }
+
+    #ambient {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: -2;
+      opacity: 0.72;
+    }
+
+    .noise {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      opacity: 0.22;
+      background-image:
+        linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+      background-size: 42px 42px;
+      mask-image: radial-gradient(circle at center, black 20%, transparent 85%);
+    }
+
+    .shell {
+      width: min(1240px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 18px 0 40px;
+    }
+
+    .glass {
+      background: linear-gradient(145deg, rgba(255,255,255,.095), rgba(255,255,255,.035));
+      border: 1px solid var(--line);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), var(--shadow);
+      backdrop-filter: blur(22px) saturate(135%);
+      -webkit-backdrop-filter: blur(22px) saturate(135%);
+    }
+
+    header {
+      position: sticky;
+      top: 12px;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 13px 14px 13px 18px;
+      border-radius: 22px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      position: relative;
+      width: 42px;
+      height: 42px;
+      flex: 0 0 auto;
+      border-radius: 14px;
+      background: conic-gradient(from 210deg, var(--cyan), var(--violet), var(--pink), var(--cyan));
+      box-shadow: 0 0 32px rgba(102, 104, 255, .55);
+      animation: floatMark 5s ease-in-out infinite;
+    }
+
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      inset: 6px;
+      border-radius: 10px;
+      background: #0b0e20;
+      box-shadow: inset 0 0 16px rgba(255,255,255,.08);
+    }
+
+    .brand-copy { min-width: 0; }
+
+    .brand-title {
+      margin: 0;
+      font-size: clamp(1rem, 1.4vw, 1.18rem);
+      letter-spacing: -.025em;
+      white-space: nowrap;
+    }
+
+    .brand-subtitle {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: .74rem;
+      white-space: nowrap;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-btn, .mode-btn {
+      min-height: 44px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 14px;
+      background: rgba(255,255,255,.065);
+      cursor: pointer;
+      transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
+    }
+
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 13px;
+      font-size: .84rem;
+    }
+
+    .icon-btn:hover, .mode-btn:hover {
+      transform: translateY(-2px);
+      border-color: rgba(133, 226, 255, .4);
+      background: rgba(255,255,255,.1);
+      box-shadow: 0 10px 28px rgba(0,0,0,.24), 0 0 24px rgba(104, 125, 255, .12);
+    }
+
+    .icon-btn:active, .mode-btn:active { transform: translateY(0) scale(.97); }
+
+    .icon-btn:focus-visible, .tool-tab:focus-visible, .mode-btn:focus-visible {
+      outline: 2px solid var(--cyan);
+      outline-offset: 3px;
+    }
+
+    .sound-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 12px var(--green);
+      transition: .2s ease;
+    }
+
+    .sound-off .sound-dot {
+      background: #77809b;
+      box-shadow: none;
+    }
+
+    .hero {
+      position: relative;
+      padding: clamp(58px, 8vw, 94px) 8px clamp(34px, 5vw, 58px);
+      text-align: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 15px;
+      padding: 7px 11px;
+      border: 1px solid rgba(126, 212, 255, .24);
+      border-radius: 999px;
+      background: rgba(67, 133, 255, .08);
+      color: #cfdeff;
+      font-size: .72rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      box-shadow: 0 0 28px rgba(77, 128, 255, .13);
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(3.4rem, 10vw, 8rem);
+      line-height: .88;
+      letter-spacing: -.075em;
+      background: linear-gradient(105deg, #fff 15%, #baf9ff 38%, #bba8ff 64%, #ff9cdb 86%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      filter: drop-shadow(0 12px 38px rgba(101, 113, 255, .18));
+    }
+
+    .hero p {
+      width: min(660px, 100%);
+      margin: 24px auto 0;
+      color: var(--muted);
+      font-size: clamp(1rem, 2.2vw, 1.26rem);
+      line-height: 1.65;
+    }
+
+    .hero-meta {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 25px;
+    }
+
+    .hero-chip {
+      padding: 8px 11px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.09);
+      color: #c7cee4;
+      font-size: .76rem;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr);
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .tool-nav {
+      padding: 12px;
+      border-radius: var(--radius);
+    }
+
+    .nav-label {
+      margin: 4px 7px 11px;
+      color: #8790ab;
+      font-size: .69rem;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .tool-list {
+      display: grid;
+      gap: 6px;
+    }
+
+    .tool-tab {
+      position: relative;
+      width: 100%;
+      min-height: 54px;
+      display: grid;
+      grid-template-columns: 34px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border: 1px solid transparent;
+      border-radius: 15px;
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+      overflow: hidden;
+      transition: transform .2s ease, background .2s ease, border-color .2s ease;
+    }
+
+    .tool-tab::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(100deg, rgba(72, 232, 255, .11), rgba(159, 103, 255, .1));
+      opacity: 0;
+      transition: opacity .2s ease;
+    }
+
+    .tool-tab:hover { transform: translateX(3px); background: rgba(255,255,255,.04); }
+
+    .tool-tab.active {
+      border-color: rgba(133, 224, 255, .2);
+      background: rgba(255,255,255,.065);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 10px 28px rgba(0,0,0,.15);
+    }
+
+    .tool-tab.active::before { opacity: 1; }
+
+    .tool-icon {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 11px;
+      background: linear-gradient(145deg, rgba(255,255,255,.14), rgba(255,255,255,.04));
+      border: 1px solid rgba(255,255,255,.1);
+      font-size: 1rem;
+      text-shadow: 0 0 14px currentColor;
+    }
+
+    .tool-name {
+      position: relative;
+      font-size: .84rem;
+      font-weight: 640;
+      letter-spacing: -.01em;
+    }
+
+    .tool-key {
+      position: relative;
+      min-width: 25px;
+      padding: 4px 5px;
+      border-radius: 7px;
+      background: rgba(0,0,0,.18);
+      border: 1px solid rgba(255,255,255,.08);
+      color: #858eaa;
+      font-size: .63rem;
+      text-align: center;
+    }
+
+    .stage-card {
+      min-width: 0;
+      border-radius: var(--radius);
+      padding: 12px;
+      overflow: hidden;
+    }
+
+    .stage-head {
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 3px 7px 11px 10px;
+    }
+
+    .stage-title-wrap { min-width: 0; }
+
+    .stage-title {
+      margin: 0;
+      font-size: clamp(1.1rem, 2vw, 1.4rem);
+      letter-spacing: -.03em;
+    }
+
+    .stage-hint {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: .75rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mode-btn {
+      display: none;
+      padding: 0 13px;
+      color: #dce4ff;
+      font-size: .78rem;
+      white-space: nowrap;
+    }
+
+    .mode-btn.show { display: inline-flex; align-items: center; }
+
+    .canvas-wrap {
+      position: relative;
+      width: 100%;
+      height: clamp(430px, 61vh, 680px);
+      min-height: 430px;
+      overflow: hidden;
+      border-radius: 19px;
+      border: 1px solid rgba(255,255,255,.1);
+      background:
+        radial-gradient(circle at 48% 45%, rgba(72, 80, 170, .12), transparent 45%),
+        linear-gradient(145deg, rgba(3, 6, 18, .86), rgba(10, 13, 28, .96));
+      box-shadow: inset 0 0 80px rgba(0,0,0,.35);
+      isolation: isolate;
+    }
+
+    #stage {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: crosshair;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+
+    #stage.switching { opacity: 0; transform: scale(.985); }
+
+    .canvas-glow {
+      position: absolute;
+      inset: auto 15% -45% 15%;
+      height: 55%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(79, 111, 255, .19), transparent 68%);
+      filter: blur(30px);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .status-pill {
+      position: absolute;
+      left: 14px;
+      bottom: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 32px;
+      padding: 0 10px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 999px;
+      background: rgba(6, 9, 22, .55);
+      backdrop-filter: blur(10px);
+      color: #98a2be;
+      font-size: .68rem;
+      pointer-events: none;
+    }
+
+    .status-pill::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 10px var(--cyan);
+    }
+
+    .shortcut-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      margin: 16px auto 0;
+      color: #7f89a3;
+      font-size: .72rem;
+    }
+
+    kbd {
+      display: inline-flex;
+      min-width: 23px;
+      min-height: 22px;
+      align-items: center;
+      justify-content: center;
+      margin-right: 5px;
+      padding: 2px 6px;
+      border: 1px solid rgba(255,255,255,.11);
+      border-bottom-color: rgba(255,255,255,.2);
+      border-radius: 6px;
+      background: rgba(255,255,255,.05);
+      color: #cbd2e7;
+      font-family: inherit;
+      font-size: .64rem;
+      box-shadow: 0 2px 0 rgba(0,0,0,.25);
+    }
+
+    footer {
+      padding: 35px 6px 5px;
+      text-align: center;
+      color: #69728d;
+      font-size: .72rem;
+    }
+
+    @keyframes floatMark {
+      0%, 100% { transform: translateY(0) rotate(0); }
+      50% { transform: translateY(-3px) rotate(4deg); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: .55; transform: scale(.85); }
+      50% { opacity: 1; transform: scale(1.15); }
+    }
+
+    @media (max-width: 900px) {
+      .shell { width: min(100% - 18px, 820px); }
+      .workspace { grid-template-columns: 1fr; }
+      .tool-nav { padding: 9px; overflow: hidden; }
+      .nav-label { display: none; }
+      .tool-list {
+        grid-template-columns: repeat(12, minmax(126px, 1fr));
+        gap: 7px;
+        overflow-x: auto;
+        overscroll-behavior-inline: contain;
+        scrollbar-width: thin;
+        padding-bottom: 3px;
+      }
+      .tool-tab { min-height: 50px; }
+      .tool-tab:hover { transform: translateY(-2px); }
+      .canvas-wrap { height: min(62vh, 610px); }
+    }
+
+    @media (max-width: 620px) {
+      .shell { width: calc(100% - 12px); padding-top: 7px; }
+      header { top: 6px; border-radius: 18px; padding: 10px; }
+      .brand-subtitle { display: none; }
+      .brand-mark { width: 38px; height: 38px; border-radius: 12px; }
+      .icon-btn { width: 42px; padding: 0; }
+      .icon-btn span.label { display: none; }
+      .hero { padding: 50px 6px 34px; }
+      h1 { font-size: clamp(3rem, 18vw, 5.2rem); }
+      .hero p { font-size: .98rem; }
+      .stage-card { padding: 8px; }
+      .stage-head { min-height: 58px; padding: 4px 5px 9px; }
+      .stage-hint { max-width: 66vw; }
+      .canvas-wrap { height: calc(100svh - 255px); min-height: 390px; max-height: 610px; }
+      .status-pill { left: 10px; bottom: 10px; }
+      .shortcut-bar { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="ambient" aria-hidden="true"></canvas>
+  <div class="noise" aria-hidden="true"></div>
+
+  <div class="shell">
+    <header class="glass" aria-label="Fidget Tools controls">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div class="brand-copy">
+          <h2 class="brand-title">Fidget Tools</h2>
+          <p class="brand-subtitle">12 Interactive Toys to Cure Boredom</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" id="soundBtn" type="button" aria-label="Turn sound off" aria-pressed="true">
+          <span class="sound-dot" aria-hidden="true"></span>
+          <span class="label">Sound on</span>
+        </button>
+        <button class="icon-btn" id="resetBtn" type="button" aria-label="Reset current fidget tool" title="Reset current tool (R)">
+          <span aria-hidden="true">↻</span>
+          <span class="label">Reset</span>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <div class="eyebrow">Offline sensory playground</div>
+        <h1 id="page-title">Fidget Tools</h1>
+        <p>12 tactile, physics-powered toys with procedural sound. Tap, drag, flick, stack and breathe — no downloads, no distractions.</p>
+        <div class="hero-meta" aria-label="Website features">
+          <span class="hero-chip">100% offline</span>
+          <span class="hero-chip">Mouse + touch</span>
+          <span class="hero-chip">Procedural audio</span>
+          <span class="hero-chip">Zero tracking</span>
+        </div>
+      </section>
+
+      <section class="workspace" aria-label="Interactive fidget tools">
+        <nav class="tool-nav glass" aria-label="Choose a fidget tool">
+          <div class="nav-label">Choose your toy</div>
+          <div class="tool-list" id="toolList"></div>
+        </nav>
+
+        <article class="stage-card glass" aria-live="polite">
+          <div class="stage-head">
+            <div class="stage-title-wrap">
+              <h2 class="stage-title" id="stageTitle">Bubble Wrap</h2>
+              <p class="stage-hint" id="stageHint">Tap or drag across bubbles to pop them.</p>
+            </div>
+            <button class="mode-btn" id="modeBtn" type="button" aria-label="Change interaction mode">Attract</button>
+          </div>
+
+          <div class="canvas-wrap" id="canvasWrap">
+            <canvas id="stage" tabindex="0" role="application" aria-label="Interactive Bubble Wrap canvas"></canvas>
+            <div class="canvas-glow" aria-hidden="true"></div>
+            <div class="status-pill" id="statusPill">Ready to play</div>
+          </div>
+        </article>
+      </section>
+
+      <div class="shortcut-bar" aria-label="Keyboard shortcuts">
+        <span><kbd>1–9</kbd>tools</span>
+        <span><kbd>0</kbd>tool 10</span>
+        <span><kbd>-</kbd>tool 11</span>
+        <span><kbd>=</kbd>tool 12</span>
+        <span><kbd>Space</kbd>interact</span>
+        <span><kbd>S</kbd>sound</span>
+        <span><kbd>R</kbd>reset</span>
+      </div>
+    </main>
+
+    <footer>Made with HTML, CSS, Canvas and Web Audio — entirely in this file.</footer>
+  </div>
+
+  <script>
+    "use strict";
+
+    /* --------------------------------------------------------------------------
+       Shared utilities
+    -------------------------------------------------------------------------- */
+    const TAU = Math.PI * 2;
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const rand = (min, max) => Math.random() * (max - min) + min;
+    const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by);
+    const now = () => performance.now() * 0.001;
+    const roundedRect = (ctx, x, y, w, h, r) => {
+      r = Math.min(r, w * 0.5, h * 0.5);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    };
+
+    const prefersReduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const stage = document.getElementById("stage");
+    const ctx = stage.getContext("2d", { alpha: true, desynchronized: true });
+    const ambient = document.getElementById("ambient");
+    const bgx = ambient.getContext("2d", { alpha: true, desynchronized: true });
+    const wrap = document.getElementById("canvasWrap");
+    const toolList = document.getElementById("toolList");
+    const stageTitle = document.getElementById("stageTitle");
+    const stageHint = document.getElementById("stageHint");
+    const statusPill = document.getElementById("statusPill");
+    const soundBtn = document.getElementById("soundBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const modeBtn = document.getElementById("modeBtn");
+
+    let W = 1, H = 1, DPR = 1;
+    let currentIndex = 0;
+    let activeTool = null;
+    let lastFrame = performance.now();
+    let switchTimer = 0;
+    let pointer = { x: 0, y: 0, px: 0, py: 0, down: false, id: null, pressure: 0.5, shift: false };
+
+    function vibrate(ms = 8) {
+      if (navigator.vibrate) navigator.vibrate(ms);
+    }
+
+    function setStatus(text) {
+      statusPill.textContent = text;
+    }
+
+    /* --------------------------------------------------------------------------
+       Procedural Web Audio engine
+    -------------------------------------------------------------------------- */
+    class AudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.master = null;
+        this.enabled = true;
+        this.lastScratch = 0;
+        this.lastMetal = 0;
+      }
+
+      ensure() {
+        if (!this.enabled) return null;
+        if (!this.ctx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) return null;
+          this.ctx = new AC();
+          this.master = this.ctx.createGain();
+          this.master.gain.value = 0.24;
+          this.master.connect(this.ctx.destination);
+        }
+        if (this.ctx.state === "suspended") this.ctx.resume();
+        return this.ctx;
+      }
+
+      toggle() {
+        this.enabled = !this.enabled;
+        soundBtn.classList.toggle("sound-off", !this.enabled);
+        soundBtn.setAttribute("aria-pressed", String(this.enabled));
+        soundBtn.setAttribute("aria-label", this.enabled ? "Turn sound off" : "Turn sound on");
+        soundBtn.querySelector(".label").textContent = this.enabled ? "Sound on" : "Sound off";
+        if (this.enabled) this.click(0.8);
+      }
+
+      tone(freq = 440, duration = 0.12, type = "sine", gain = 0.18, endFreq = freq, delay = 0) {
+        const ac = this.ensure();
+        if (!ac) return;
+        const t = ac.currentTime + delay;
+        const osc = ac.createOscillator();
+        const amp = ac.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(Math.max(20, freq), t);
+        osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), t + duration);
+        amp.gain.setValueAtTime(0.0001, t);
+        amp.gain.exponentialRampToValueAtTime(gain, t + 0.008);
+        amp.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+        osc.connect(amp).connect(this.master);
+        osc.start(t);
+        osc.stop(t + duration + 0.03);
+      }
+
+      noise(duration = 0.08, gain = 0.12, filterFreq = 900, delay = 0) {
+        const ac = this.ensure();
+        if (!ac) return;
+        const length = Math.max(1, Math.floor(ac.sampleRate * duration));
+        const buffer = ac.createBuffer(1, length, ac.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / length);
+        const src = ac.createBufferSource();
+        const filter = ac.createBiquadFilter();
+        const amp = ac.createGain();
+        const t = ac.currentTime + delay;
+        src.buffer = buffer;
+        filter.type = "bandpass";
+        filter.frequency.value = filterFreq;
+        filter.Q.value = 0.8;
+        amp.gain.setValueAtTime(gain, t);
+        amp.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+        src.connect(filter).connect(amp).connect(this.master);
+        src.start(t);
+      }
+
+      click(strength = 1) {
+        this.tone(125 * strength, 0.045, "square", 0.11, 72);
+        this.noise(0.035, 0.06, 2200);
+      }
+
+      pop(pitch = 1) {
+        this.tone(180 * pitch, 0.075, "sine", 0.19, 72 * pitch);
+        this.noise(0.045, 0.08, 1700 * pitch);
+      }
+
+      pluck(freq = 330) {
+        this.tone(freq, 0.3, "triangle", 0.13, freq * 0.72);
+        this.tone(freq * 2.01, 0.16, "sine", 0.035, freq * 1.7);
+      }
+
+      water() {
+        this.tone(rand(430, 560), 0.38, "sine", 0.07, rand(160, 240));
+        this.noise(0.16, 0.025, 750);
+      }
+
+      scratch(speed) {
+        const t = performance.now();
+        if (t - this.lastScratch < 55) return;
+        this.lastScratch = t;
+        this.noise(0.055, clamp(speed / 900, .015, .065), rand(900, 1700));
+      }
+
+      metal(force = 1) {
+        const t = performance.now();
+        if (t - this.lastMetal < 55) return;
+        this.lastMetal = t;
+        const f = rand(560, 920);
+        this.tone(f, 0.16, "triangle", .055 * force, f * 1.04);
+        this.tone(f * 1.49, 0.1, "sine", .025 * force, f * 1.45);
+      }
+
+      squish() {
+        this.tone(rand(70, 95), 0.18, "sine", .11, rand(40, 55));
+        this.noise(.11, .025, 280);
+      }
+
+      dice() {
+        for (let i = 0; i < 4; i++) {
+          this.noise(.045, .075, rand(650, 1300), i * .06);
+          this.tone(rand(85, 125), .05, "square", .04, 55, i * .06);
+        }
+      }
+
+      whoosh(speed = 1) {
+        this.noise(.08, clamp(speed * .016, .008, .045), clamp(500 + speed * 140, 500, 2200));
+      }
+
+      spark() {
+        const f = rand(620, 1400);
+        this.tone(f, .085, "square", .035, f * 1.9);
+      }
+
+      bell(freq = 440, gain = .12) {
+        this.tone(freq, 1.5, "sine", gain, freq * .997);
+        this.tone(freq * 2.01, .9, "sine", gain * .36, freq * 2);
+        this.tone(freq * 3.02, .55, "sine", gain * .16, freq * 3);
+      }
+    }
+
+    const audio = new AudioEngine();
+
+    /* --------------------------------------------------------------------------
+       Ambient particle background
+    -------------------------------------------------------------------------- */
+    const ambientParticles = Array.from({ length: 54 }, () => ({
+      x: Math.random(), y: Math.random(), r: rand(.5, 2.2), vx: rand(-.006, .006), vy: rand(-.01, -.003), a: rand(.08, .38), hue: rand(185, 310)
+    }));
+
+    function drawAmbient(dt) {
+      const bw = innerWidth, bh = innerHeight;
+      bgx.clearRect(0, 0, bw, bh);
+      for (const p of ambientParticles) {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        if (p.y < -.03) { p.y = 1.03; p.x = Math.random(); }
+        if (p.x < -.03) p.x = 1.03;
+        if (p.x > 1.03) p.x = -.03;
+        const x = p.x * bw, y = p.y * bh;
+        bgx.beginPath();
+        bgx.arc(x, y, p.r, 0, TAU);
+        bgx.fillStyle = `hsla(${p.hue}, 90%, 72%, ${p.a})`;
+        bgx.shadowBlur = 12;
+        bgx.shadowColor = `hsla(${p.hue}, 90%, 65%, .35)`;
+        bgx.fill();
+      }
+      bgx.shadowBlur = 0;
+    }
+
+    /* --------------------------------------------------------------------------
+       Tool 1: Bubble Wrap
+    -------------------------------------------------------------------------- */
+    class BubbleWrap {
+      constructor() { this.bubbles = []; this.pops = []; }
+      reset() {
+        this.bubbles = [];
+        const gap = clamp(Math.min(W, H) * .115, 46, 72);
+        const cols = Math.max(4, Math.floor((W - 28) / gap));
+        const rows = Math.max(4, Math.floor((H - 28) / gap));
+        const sx = (W - (cols - 1) * gap) / 2;
+        const sy = (H - (rows - 1) * gap) / 2;
+        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+          this.bubbles.push({ x: sx + c * gap, y: sy + r * gap, radius: gap * .34, poppedAt: 0, seed: Math.random() });
+        }
+        this.pops = [];
+      }
+      popAt(x, y) {
+        const t = now();
+        let count = 0;
+        for (const b of this.bubbles) {
+          if (!b.poppedAt && dist(x, y, b.x, b.y) < b.radius * 1.08) {
+            b.poppedAt = t;
+            this.pops.push({ x: b.x, y: b.y, t: 0, hue: 185 + b.seed * 115 });
+            audio.pop(rand(.84, 1.2));
+            vibrate(7);
+            count++;
+            if (count > 2) break;
+          }
+        }
+      }
+      pointerDown(p) { this.popAt(p.x, p.y); }
+      pointerMove(p) { if (p.down) this.popAt(p.x, p.y); }
+      primary() { this.popAt(W * .5, H * .5); }
+      update(dt) {
+        const t = now();
+        for (const b of this.bubbles) if (b.poppedAt && t - b.poppedAt > 2) b.poppedAt = 0;
+        for (const p of this.pops) p.t += dt;
+        this.pops = this.pops.filter(p => p.t < .55);
+      }
+      draw(ctx) {
+        const t = now();
+        for (const b of this.bubbles) {
+          const popped = !!b.poppedAt;
+          let scale = 1;
+          if (popped) scale = clamp((t - b.poppedAt) * 8, 0, 1);
+          const r = popped ? b.radius * (.88 - scale * .14) : b.radius;
+          const grad = ctx.createRadialGradient(b.x - r * .32, b.y - r * .36, r * .08, b.x, b.y, r);
+          if (popped) {
+            grad.addColorStop(0, "rgba(65,76,125,.28)");
+            grad.addColorStop(1, "rgba(11,15,35,.3)");
+          } else {
+            grad.addColorStop(0, "rgba(240,252,255,.72)");
+            grad.addColorStop(.25, `hsla(${190 + b.seed * 55}, 88%, 72%, .38)`);
+            grad.addColorStop(1, "rgba(38,48,95,.25)");
+          }
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, r, 0, TAU);
+          ctx.fillStyle = grad;
+          ctx.shadowBlur = popped ? 0 : 18;
+          ctx.shadowColor = `hsla(${190 + b.seed * 70}, 90%, 65%, .25)`;
+          ctx.fill();
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = popped ? "rgba(255,255,255,.07)" : "rgba(220,250,255,.31)";
+          ctx.stroke();
+          if (!popped) {
+            ctx.beginPath();
+            ctx.arc(b.x - r * .22, b.y - r * .26, r * .16, 0, TAU);
+            ctx.fillStyle = "rgba(255,255,255,.4)";
+            ctx.fill();
+          }
+        }
+        ctx.shadowBlur = 0;
+        for (const p of this.pops) {
+          const q = p.t / .55;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 10 + q * 44, 0, TAU);
+          ctx.strokeStyle = `hsla(${p.hue}, 92%, 72%, ${1 - q})`;
+          ctx.lineWidth = 2 * (1 - q);
+          ctx.stroke();
+        }
+      }
+    }
+
+    /* --------------------------------------------------------------------------
+       Tool 2: Push Buttons
+    -------------------------------------------------------------------------- */
+    class PushButtons {
+      constructor() { this.buttons = []; }
+      reset() {
+        this.buttons = [];
+        const cols = W < 560 ? 2 : 3;
+        const rows = 2;
+        const dx = W / (cols + 1), dy = H / (rows + 1);
+        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+          this.buttons.push({ x: dx * (c + 1), y: dy * (r + 1), r: clamp(Math.min(dx, dy) * .28, 42, 74), hue: rand(0, 360), press: 0 });
+        }
+      }
+      pressAt(x, y) {
+        let nearest = null, nd = Infinity;
+        for (const b of this.buttons) {
+          const d = dist(x, y, b.x, b.y);
+          if (d < b.r * 1.15 && d < nd) { nearest = b; nd = d; }
+        }
+        if (nearest) {
+          nearest.press = 1;
+          nearest.hue = (nearest.hue + rand(24, 100)) % 360;
+          audio.click(rand(.85, 1.15));
+          vibrate(9);
+        }
+      }
+      pointerDown(p) { this.pressAt(p.x, p.y); }
+      primary() { this.pressAt(W * .5, H * .5); }
+      update(dt) { for (const b of this.buttons) b.press = Math.max(0, b.press - dt * 4.8); }
+      draw(ctx) {
+        for (const b of this.buttons) {
+          const s = 1 - b.press * .09;
+          const r = b.r * s;
+          ctx.save();
+          ctx.translate(b.x, b.y + b.press * 6);
+          ctx.beginPath();
+          ctx.arc(0, 8, b.r * 1.09, 0, TAU);
+          ctx.fillStyle = "rgba(0,0,0,.35)";
+          ctx.fill();
+          const rim = ctx.createRadialGradient(-r * .3, -r * .35, r * .1, 0, 0, r * 1.14);
+          rim.addColorStop(0, "rgba(255,255,255,.75)");
+          rim.addColorStop(.1, `hsl(${b.hue}, 92%, 68%)`);
+          rim.addColorStop(.72, `hsl(${b.hue}, 88%, 50%)`);
+          rim.addColorStop(1, `hsl(${b.hue}, 80%, 25%)`);
+          ctx.beginPath();
+          ctx.arc(0, 0, r, 0, TAU);
+          ctx.fillStyle = rim;
+          ctx.shadowBlur = 30;
+          ctx.shadowColor = `hsla(${b.hue}, 95%, 60%, .42)`;
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(-r * .24, -r * .26, r * .19, 0, TAU);
+          ctx.fillStyle = "rgba(255,255,255,.28)";
+          ctx.fill();
+          ctx.restore();
+        }
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    /* --------------------------------------------------------------------------
+       Tool 3: Fidget Spinner
+    -------------------------------------------------------------------------- */
+    class Spinner {
+      reset() {
+        this.angle = 0;
+        this.omega = 1.1;
+        this.dragging = false;
+        this.lastAngle = 0;
+        this.lastMove = performance.now();
+        this.tick = 0;
+      }
+      pointerDown(p) {
+        this.dragging = true;
+        this.lastAngle = Math.atan2(p.y - H / 2, p.x - W / 2);
+        this.lastMove = performance.now();
+      }
+      pointerMove(p) {
+        if (!this.dragging) return;
+        const a = Math.atan2(p.y - H / 2, p.x - W / 2);
+        let da = a - this.lastAngle;
+        if (da > Math.PI) da -= TAU;
+        if (da < -Math.PI) da += TAU;
+        const t = performance.now();
+        const dt = Math.max(.006, (t - this.lastMove) / 1000);
+        this.angle += da;
+        this.omega = clamp(da / dt, -28, 28);
+        this.lastAngle = a;
+        this.lastMove = t;
+      }
+      pointerUp() { this.dragging = false; audio.whoosh(Math.abs(this.omega)); }
+      primary() { this.omega += this.omega >= 0 ? 8 : -8; audio.whoosh(8); }
+      update(dt) {
+        if (!this.dragging) {
+          this.angle += this.omega * dt;
+          this.omega *= Math.exp(-.62 * dt);
+          if (Math.abs(this.omega) < .003) this.omega = 0;
+        }
+        this.tick += Math.abs(this.omega) * dt;
+        if (this.tick > 2.4 && Math.abs(this.omega) > 2.5) {
+          this.tick = 0;
+          audio.whoosh(Math.abs(this.omega) * .18);
+        }
+      }
+      draw(ctx) {
+        const cx = W / 2, cy = H / 2;
+        const R = clamp(Math.min(W, H) * .24, 90, 155);
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(this.angle);
+        for (let i = 0; i < 3; i++) {
+          const a = i * TAU / 3;
+          const x = Math.cos(a) * R * .62, y = Math.sin(a) * R * .62;
+          const hue = 190 + i * 48;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a - .42) * R * .25, Math.sin(a - .42) * R * .25);
+          ctx.quadraticCurveTo(Math.cos(a) * R * .67, Math.sin(a) * R * .67, Math.cos(a + .42) * R * .25, Math.sin(a + .42) * R * .25);
+          ctx.lineWidth = R * .3;
+          ctx.lineCap = "round";
+          ctx.strokeStyle = `hsla(${hue}, 90%, 58%, .76)`;
+          ctx.shadowBlur = 26;
+          ctx.shadowColor = `hsla(${hue}, 90%, 58%, .48)`;
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x, y, R * .19, 0, TAU);
+          const g = ctx.createRadialGradient(x - R * .06, y - R * .07, 2, x, y, R * .19);
+          g.addColorStop(0, "rgba(255,255,255,.9)");
+          g.addColorStop(.18, `hsl(${hue}, 90%, 70%)`);
+          g.addColorStop(1, `hsl(${hue}, 70%, 28%)`);
+          ctx.fillStyle = g;
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(x, y, R * .085, 0, TAU);
+          ctx.fillStyle = "rgba(7,10,24,.88)";
+          ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.arc(0, 0, R * .25, 0, TAU);
+        const hub = ctx.createRadialGradient(-R * .08, -R * .09, 2, 0, 0, R * .25);
+        hub.addColorStop(0, "#fff");
+        hub.addColorStop(.16, "#a8f5ff");
+        hub.addColorStop(.58, "#615fe7");
+        hub.addColorStop(1, "#202342");
+        ctx.fillStyle = hub;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(0, 0, R * .1, 0, TAU);
+        ctx.fillStyle = "rgba(12,16,36,.72)";
+        ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = "rgba(205,214,242,.58)";
+        ctx.font = "600 12px system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText(`${Math.abs(this.omega).toFixed(1)} rad/s`, cx, cy + R + 62);
+      }
+    }
+
+    /* --------------------------------------------------------------------------
+       Tool 4: Sand Drawing
+    -------------------------------------------------------------------------- */
+    class SandDrawing {
+      reset() { this.grains = []; }
+      addLine(p) {
+        const speed = dist(p.x, p.y, p.px, p.py) * 60;
+        const steps = clamp(Math.ceil(dist(p.x, p.y, p.px, p.py) / 3), 1, 16);
+        for (let s = 0; s < steps; s++) {
+          const t = s / steps;
+          const x = lerp(p.px, p.x, t), y = lerp(p.py, p.y, t);
+          for (let i = 0; i < 5; i++) this.grains.push({ x: x + rand(-8, 8), y: y + rand(-8, 8), r: rand(.5, 1.8), life: 1, hue: rand(34, 53) });
+        }
+        if (this.grains.length > 6500) this.grains.splice(0, this.grains.length - 6500);
+        audio.scratch(speed);
+      }
+      pointerDown(p) { this.addLine(p); }
+      pointerMove(p) { if (p.down) this.addLine(p); }
+      primary() {
+        for (let i = 0; i < 140; i++) this.grains.push({ x: W / 2 + rand(-50, 50), y: H / 2 + rand(-50, 50), r: rand(.5, 1.8), life: 1, hue: rand(34, 53) });
+        audio.scratch(500);
+      }
+      update(dt) {
+        for (const g of this.grains) { g.life -= dt * .045; g.y += dt * .55; }
+        this.grains = this.grains.filter(g => g.life > 0);
+      }
+      draw(ctx) {
+        ctx.fillStyle = "rgba(210,176,95,.7)";
+        for (const g of this.grains) {
+          ctx.globalAlpha = g.life * .9;
+          ctx.fillStyle = `hsl(${g.hue}, 70%, ${55 + g.r * 8}%)`;
+          ctx.fillRect(g.x, g.y, g.r, g.r);
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    /* --------------------------------------------------------------------------
+       Tool 5: Water Ripples
+    -------------------------------------------------------------------------- */
+    class WaterRipples {
+      reset() { this.ripples = []; this.last = 0; }
+      add(x, y, sound = true) {
+        this.ripples.push({ x, y, age: 0, max: rand(90, 190), hue: rand(180, 210) });
+        if (this.ripples.length > 80) this.ripples.shift();
+        if (sound) audio.water();
+      }
+      pointerDown(p) { this.add(p.x, p.y); vibrate(6); }
+      pointerMove(p) {
+        if (p.down && performance.now() - this.last > 90) {
+          this.last = performance.now();
+          this.add(p.x, p.y, false);
+          audio.water();
+        }
+      }
+      primary() { this.add(W / 2, H / 2); }
+      update(dt) {
+        for (const r of this.ripples) r.age += dt;
+        this.ripples = this.ripples.filter(r => r.age < 1.7);
+      }
+      draw(ctx) {
+        const g = ctx.createLinearGradient(0, 0, W, H);
+        g.addColorStop(0, "rgba(24,80,135,.09)");
+        g.addColorStop(1, "rgba(70,42,142,.08)");
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, W, H);
+        for (const r of this.ripples) {
+          const q = r.age / 1.7;
+          const radius = r.max * (1 - Math.pow(1 - q, 2));
+          for (let i = 0; i < 3; i++) {
+            // Outer rings are delayed until their radius is positive. Canvas
+            // throws IndexSizeError when ellipse() receives a negative radius.
+            const ringRadius = radius - i * 14;
+            if (!Number.isFinite(ringRadius) || ringRadius <= 0.1) continue;
+
+            ctx.beginPath();
+            ctx.ellipse(r.x, r.y, ringRadius, ringRadius * .52, 0, 0, TAU);
+            ctx.strokeStyle = `hsla(${r.hue + i * 5}, 95%, 72%, ${(1 - q) * (.48 - i * .1)})`;
+            ctx.lineWidth = 2 - i * .35;
+            ctx.shadowBlur = 14;
+            ctx.shadowColor = `hsla(${r.hue}, 90%, 65%, .35)`;
+            ctx.stroke();
+          }
+        }
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    /* --------------------------------------------------------------------------
+       Tool 6: Rainbow Paint
+    -------------------------------------------------------------------------- */
+    class RainbowPaint {
+      reset() { this.points = []; this.hue = 0; }
+      add(p) {
+        const d = dist(p.x, p.y, p.px, p.py);
+        const steps = clamp(Math.ceil(d / 4), 1, 18);
+        for (let i = 0; i < steps; i++) {
+          const t = i / steps;
+          this.hue = (this.hue + 1.4) % 360;
+          this.points.push({ x: lerp(p.px, p.x, t), y: lerp(p.py, p.y, t), px: lerp(p.px, p.x, Math.max(0, t - .08)), py: lerp(p.py, p.y, Math.max(0, t - .08)), hue: this.hue, life: 1, r: rand(7, 13) });
+          if (Math.random() < .32) this.points.push({ x: lerp(p.px, p.x, t) + rand(-18, 18), y: lerp(p.py, p.y, t) + rand(-18, 18), px: p.x, py: p.y, hue: this.hue + rand(-18, 18), life: .75, r: rand(1, 4) });
+        }
+        if (this.points.length > 4800) this.points.splice(0, this.points.length - 4800);
+        audio.pluck(220 + (this.hue / 360) * 220);
+      }
+      pointerDown(p) { this.add(p); }
+      pointerMove(p) { if (p.down) this.add(p); }
+      primary() {
+        const p = { x: W * .56, y: H * .5, px: W * .44, py: H * .5 };
+        this.add(p);
+      }
+      update(dt) {
+        for (const p of this.points) p.life -= dt * .065;
+        this.points = this.points.filter(p => p.life > 0);
+      }
+      draw(ctx) {
+        ctx.globalCompositeOperation = "lighter";
+        ctx.lineCap = "round";
+        for (const p of this.points) {
+          ctx.globalAlpha = p.life * .72;
+          ctx.strokeStyle = `hsl(${p.hue}, 100%, 62%)`;
+          ctx.lineWidth = p.r;
+          ctx.shadowBlur = 18;
+          ctx.shadowColor = `hsl(${p.hue}, 100%, 55%)`;
+          ctx.beginPath();
+          ctx.moveTo(p.px, p.py);
+          ctx.lineTo(p.x, p.y);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+        ctx.globalCompositeOperation = "source-over";
+      }
+    }
+
+    /* --------------------------------------------------------------------------
+       Tool 7: Magnetic Balls
+    -------------------------------------------------------------------------- */
+    class MagneticBalls {
+      constructor() { this.mode = 1; this.balls = []; }
+      reset() {
+        this.balls = Array.from({ length: 40 }, (_, i) => ({
+          x: rand(30, Math.max(31, W - 30)), y: rand(30, Math.max(31, H - 30)),
+          vx: rand(-30, 30), vy: rand(-30, 30), r: rand(7, 12), hue: 185 + (i % 8) * 14
+        }));
+      }
+      toggleMode() {
+        this.mode *= -1;
+        modeBtn.textContent = this.mode > 0 ? "Attract" : "Repel";
+        setStatus(this.mode > 0 ? "Cursor attracts" : "Cursor repels");
+        audio.click();
+      }
+      pointerDown() { this.mode = pointer.shift ? -1 : this.mode; }
+      primary() { this.toggleMode(); }
+      update(dt) {
+        const forceMode = pointer.shift ? -1 : this.mode;
+        for (const b of this.balls) {
+          if (pointer.x || pointer.y) {
+            const dx = pointer.x - b.x, dy = pointer.y - b.y;
+            const d2 = dx * dx + dy * dy + 160;
+            const d = Math.sqrt(d2);
+            const influence = pointer.down ? 145000 : 62000;
+            const f = forceMode * influence / d2;
+            b.vx += dx / d * f * dt;
+            b.vy += dy / d * f * dt;
+          }
+          b.vx *= Math.exp(-.55 * dt);
+          b.vy *= Math.exp(-.55 * dt);
+          b.x += b.vx * dt;
+          b.y += b.vy * dt;
+          if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx) * .76; }
+          if (b.x > W - b.r) { b.x = W - b.r; b.vx = -Math.abs(b.vx) * .76; }
+          if (b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy) * .76; }
+          if (b.y > H - b.r) { b.y = H - b.r; b.vy = -Math.abs(b.vy) * .76; }
+        }
+        for (let i = 0; i < this.balls.length; i++) for (let j = i + 1; j < this.balls.length; j++) {
+          const a = this.balls[i], b = this.balls[j];
+          const dx = b.x - a.x, dy = b.y - a.y;
+          const d = Math.hypot(dx, dy) || .001;
+          const minD = a.r + b.r;
+          if (d < minD) {
+            const nx = dx / d, ny = dy / d;
+            const overlap = (minD - d) * .5;
+            a.x -= nx * overlap; a.y -= ny * overlap;
+            b.x += nx * overlap; b.y += ny * overlap;
+            const rel = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+            if (rel < 0) {
+              const imp = -rel * .86;
+              a.vx -= nx * imp; a.vy -= ny * imp;
+              b.vx += nx * imp; b.vy += ny * imp;
+              if (Math.abs(rel) > 45) audio.metal(clamp(Math.abs(rel) / 220, .25, 1));
+            }
+          }
+        }
+      }
+      draw(ctx) {
+        ctx.globalCompositeOperation = "lighter";
+        for (const b of this.balls) {
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.r, 0, TAU);
+          const g = ctx.createRadialGradient(b.x - b.r * .34, b.y - b.r * .4, 1, b.x, b.y, b.r);
+          g.addColorStop(0, "rgba(255,255,255,.95)");
+          g.addColorStop(.22, `hsl(${b.hue}, 95%, 72%)`);
+          g.addColorStop(1, `hsl(${b.hue + 24}, 80%, 28%)`);
+          ctx.fillStyle = g;
+          ctx.shadowBlur = 14;
+          ctx.shadowColor = `hsla(${b.hue}, 95%, 60%, .5)`;
+          ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+        ctx.globalCompositeOperation = "source-over";
+        if (pointer.x || pointer.y) {
+          ctx.beginPath();
+          ctx.arc(pointer.x, pointer.y, pointer.down ? 28 : 20, 0, TAU);
+          ctx.strokeStyle = this.mode > 0 ? "rgba(90,245,255,.42)" : "rgba(255,90,205,.46)";
+          ctx.setLineDash([4, 7]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+    }
+
+    /* --------------------------------------------------------------------------
+       Tool 8: Slime Stretch
+    -------------------------------------------------------------------------- */
+    class Slime {
+      reset() {
+        this.cx = W / 2; this.cy = H / 2;
+        this.targetX = this.cx; this.targetY = this.cy;
+        this.vx = 0; this.vy = 0; this.dragging = false; this.squishClock = 0;
+      }
+      pointerDown(p) {
+        if (dist(p.x, p.y, this.cx, this.cy) < Math.min(W, H) * .23) {
+          this.dragging = true; this.targetX = p.x; this.targetY = p.y; audio.squish(); vibrate(7);
+        }
+      }
+      pointerMove(p) { if (this.dragging) { this.targetX = p.x; this.targetY = p.y; } }
+      pointerUp() { this.dragging = false; this.targetX = W / 2; this.targetY = H / 2; audio.squish(); }
+      primary() { this.targetX = W / 2 + rand(-W * .2, W * .2); this.targetY = H / 2 + rand(-H * .18, H * .18); this.dragging = true; setTimeout(() => { this.dragging = false; this.targetX = W / 2; this.targetY = H / 2; }, 160); audio.squish(); }
+      update(dt) {
+        if (!this.dragging) { this.targetX = W / 2; this.targetY = H / 2; }
+        const k = this.dragging ? 24 : 8;
+        this.vx += (this.targetX - this.cx) * k * dt;
+        this.vy += (this.targetY - this.cy) * k * dt;
+        this.vx *= Math.exp(-7 * dt); this.vy *= Math.exp(-7 * dt);
+        this.cx += this.vx * dt; this.cy += this.vy * dt;
+        this.squishClock += dt;
+        if (this.dragging && this.squishClock > .25) { this.squishClock = 0; audio.squish(); }
+      }
+      draw(ctx) {
+        const base = clamp(Math.min(W, H) * .2, 74, 128);
+        const ox = this.cx - W / 2, oy = this.cy - H / 2;
+        const stretch = clamp(Math.hypot(ox, oy) / (base * 2.3), 0, 1);
+        const dir = Math.atan2(oy, ox);
+        ctx.save();
+        ctx.translate(W / 2, H / 2);
+        ctx.rotate(dir);
+        const len = base * (1 + stretch * 1.55);
+        const thick = base * (1 - stretch * .38);
+        const endX = Math.hypot(ox, oy);
+        const grad = ctx.createLinearGradient(-base, 0, endX + base, 0);
+        grad.addColorStop(0, "rgba(72,255,189,.86)");
+        grad.addColorStop(.48, "rgba(91,227,255,.92)");
+        grad.addColorStop(1, "rgba(180,103,255,.9)");
+        ctx.beginPath();
+        ctx.moveTo(-len * .58, 0);
+        ctx.bezierCurveTo(-len * .45, -thick, endX * .6, -thick * .85, endX + thick * .2, -thick * .42);
+        ctx.bezierCurveTo(endX + thick * .75, -thick * .18, endX + thick * .75, thick * .18, endX + thick * .2, thick * .42);
+        ctx.bezierCurveTo(endX * .6, thick * .85, -len * .45, thick, -len * .58, 0);
+        ctx.fillStyle = grad;
+        ctx.shadowBlur = 38;
+        ctx.shadowColor = "rgba(75,240,255,.35)";
+        ctx.fill();
+        ctx.globalAlpha = .34;
+        ctx.beginPath();
+        ctx.ellipse(lerp(-base * .2, endX * .7, .45), -thick * .38, len * .28, thick * .12, 0, 0, TAU);
+        ctx.fillStyle = "white";
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.restore();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    /* --------------------------------------------------------------------------
+       Tool 9: Infinite Dice
+    -------------------------------------------------------------------------- */
+    class Dice {
+      reset() { this.value = 1 + Math.floor(Math.random() * 6); this.rollT = 0; this.rolling = false; this.rotation = 0; this.bounce = 0; }
+      roll() {
+        this.rolling = true; this.rollT = 0; this.rotation = 0; this.value = 1 + Math.floor(Math.random() * 6); audio.dice(); vibrate(12);
+      }
+      pointerDown() { this.roll(); }
+      primary() { this.roll(); }
+      update(dt) {
+        if (!this.rolling) return;
+        this.rollT += dt;
+        this.rotation += dt * (13 - this.rollT * 7);
+        this.bounce = Math.abs(Math.sin(this.rollT * 12)) * (1 - clamp(this.rollT / .9, 0, 1));
+        if (Math.floor(this.rollT * 18) !== Math.floor((this.rollT - dt) * 18)) this.value = 1 + Math.floor(Math.random() * 6);
+        if (this.rollT > .92) { this.rolling = false; this.value = 1 + Math.floor(Math.random() * 6); this.rotation = 0; this.bounce = 0; audio.click(.8); }
+      }
+      drawPip(ctx, x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
+      draw(ctx) {
+        const size = clamp(Math.min(W, H) * .33, 140, 220);
+        const cx = W / 2, cy = H / 2 - this.bounce * 55;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(this.rotation);
+        ctx.scale(1 + this.bounce * .1, 1 - this.bounce * .08);
+        roundedRect(ctx, -size / 2 + 10, -size / 2 + 18, size, size, size * .18);
+        ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fill();
+        roundedRect(ctx, -size / 2, -size / 2, size, size, size * .18);
+        const g = ctx.createLinearGradient(-size / 2, -size / 2, size / 2, size / 2);
+        g.addColorStop(0, "#f3fbff"); g.addColorStop(.45, "#a9e8ff"); g.addColorStop(1, "#8b77ff");
+        ctx.fillStyle = g;
+        ctx.shadowBlur = 38; ctx.shadowColor = "rgba(98,176,255,.36)"; ctx.fill();
+        ctx.lineWidth = 2; ctx.strokeStyle = "rgba(255,255,255,.48)"; ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "rgba(18,24,52,.88)";
+        const d = size * .23, r = size * .055;
+        const pos = {
+          1: [[0,0]],
+          2: [[-d,-d],[d,d]],
+          3: [[-d,-d],[0,0],[d,d]],
+          4: [[-d,-d],[d,-d],[-d,d],[d,d]],
+          5: [[-d,-d],[d,-d],[0,0],[-d,d],[d,d]],
+          6: [[-d,-d],[d,-d],[-d,0],[d,0],[-d,d],[d,d]]
+        }[this.value];
+        for (const [x,y] of pos) this.drawPip(ctx, x, y, r);
+        ctx.restore();
+        ctx.fillStyle = "rgba(207,215,240,.62)";
+        ctx.font = "600 13px system-ui"; ctx.textAlign = "center";
+        ctx.fillText(this.rolling ? "Rolling…" : "Tap to roll forever", cx, cy + size * .76);
+      }
+    }
+
+    /* --------------------------------------------------------------------------
+       Tool 10: Zen Pebbles
+    -------------------------------------------------------------------------- */
+    class Pebbles {
+      reset() {
+        this.stones = Array.from({ length: 7 }, (_, i) => ({
+          x: W * (.2 + (i % 4) * .18), y: H * (.25 + Math.floor(i / 4) * .18),
+          vx: 0, vy: 0, rx: rand(30, 52), ry: rand(18, 31), hue: rand(180, 260), held: false
+        }));
+        this.held = null;
+      }
+      hit(x, y, s) { return ((x - s.x) / s.rx) ** 2 + ((y - s.y) / s.ry) ** 2 <= 1.2; }
+      pointerDown(p) {
+        for (let i = this.stones.length - 1; i >= 0; i--) if (this.hit(p.x, p.y, this.stones[i])) {
+          this.held = this.stones[i]; this.held.held = true; this.held.vx = this.held.vy = 0;
+          audio.metal(.25); break;
+        }
+      }
+      pointerMove(p) {
+        if (!this.held) return;
+        this.held.vx = (p.x - p.px) * 35; this.held.vy = (p.y - p.py) * 35;
+        this.held.x = p.x; this.held.y = p.y;
+      }
+      pointerUp() { if (this.held) { this.held.held = false; audio.metal(.36); } this.held = null; }
+      primary() {
+        const s = this.stones[Math.floor(Math.random() * this.stones.length)];
+        s.vy = -240; s.vx = rand(-80, 80); audio.metal(.35);
+      }
+      update(dt) {
+        for (const s of this.stones) {
+          if (s.held) continue;
+          s.vy += 420 * dt;
+          s.vx *= Math.exp(-1.8 * dt);
+          s.x += s.vx * dt; s.y += s.vy * dt;
+          if (s.x < s.rx) { s.x = s.rx; s.vx = Math.abs(s.vx) * .28; }
+          if (s.x > W - s.rx) { s.x = W - s.rx; s.vx = -Math.abs(s.vx) * .28; }
+          if (s.y > H - s.ry - 6) { if (Math.abs(s.vy) > 90) audio.metal(.23); s.y = H - s.ry - 6; s.vy = -Math.abs(s.vy) * .18; }
+        }
+        for (let i = 0; i < this.stones.length; i++) for (let j = i + 1; j < this.stones.length; j++) {
+          const a = this.stones[i], b = this.stones[j];
+          if (a.held || b.held) continue;
+          const dx = b.x - a.x, dy = b.y - a.y;
+          const nx = dx / (Math.hypot(dx, dy) || 1), ny = dy / (Math.hypot(dx, dy) || 1);
+          const reachX = (a.rx + b.rx) * .72, reachY = a.ry + b.ry;
+          if (Math.abs(dx) < reachX && Math.abs(dy) < reachY) {
+            const overlap = reachY - Math.abs(dy);
+            const sign = dy >= 0 ? 1 : -1;
+            a.y -= sign * overlap * .5; b.y += sign * overlap * .5;
+            const rel = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+            if (rel < -25) audio.metal(.22);
+            a.vy *= .55; b.vy *= .55;
+          }
+        }
+      }
+      draw(ctx) {
+        const sorted = [...this.stones].sort((a,b) => a.y - b.y);
+        for (const s of sorted) {
+          ctx.save(); ctx.translate(s.x, s.y);
+          ctx.beginPath(); ctx.ellipse(0, s.ry * .65, s.rx * .82, s.ry * .46, 0, 0, TAU);
+          ctx.fillStyle = "rgba(0,0,0,.28)"; ctx.fill();
+          ctx.beginPath(); ctx.ellipse(0, 0, s.rx, s.ry, 0, 0, TAU);
+          const g = ctx.createRadialGradient(-s.rx * .25, -s.ry * .55, 2, 0, 0, s.rx);
+          g.addColorStop(0, "rgba(255,255,255,.64)");
+          g.addColorStop(.22, `hsl(${s.hue}, 26%, 65%)`);
+          g.addColorStop(1, `hsl(${s.hue}, 24%, 24%)`);
+          ctx.fillStyle = g; ctx.shadowBlur = s.held ? 24 : 10; ctx.shadowColor = `hsla(${s.hue}, 80%, 65%, .25)`; ctx.fill();
+          ctx.strokeStyle = "rgba(255,255,255,.12)"; ctx.stroke();
+          ctx.restore();
+        }
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    /* --------------------------------------------------------------------------
+       Tool 11: Neon Particle Burst
+    -------------------------------------------------------------------------- */
+    class Burst {
+      reset() { this.particles = []; }
+      burst(x, y) {
+        const count = prefersReduced ? 28 : 78;
+        const baseHue = rand(0, 360);
+        for (let i = 0; i < count; i++) {
+          const a = rand(0, TAU), speed = rand(70, 390);
+          this.particles.push({ x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, life: rand(.55, 1.15), max: 1, r: rand(1.4, 4.8), hue: baseHue + rand(-65, 65) });
+        }
+        if (this.particles.length > 1800) this.particles.splice(0, this.particles.length - 1800);
+        audio.spark(); audio.pop(rand(.8, 1.2)); vibrate(10);
+      }
+      pointerDown(p) { this.burst(p.x, p.y); }
+      pointerMove(p) { if (p.down && Math.random() < .18) this.burst(p.x, p.y); }
+      primary() { this.burst(W / 2, H / 2); }
+      update(dt) {
+        for (const p of this.particles) {
+          p.life -= dt; p.vy += 90 * dt; p.vx *= Math.exp(-1.1 * dt); p.vy *= Math.exp(-.5 * dt); p.x += p.vx * dt; p.y += p.vy * dt;
+        }
+        this.particles = this.particles.filter(p => p.life > 0);
+      }
+      draw(ctx) {
+        ctx.globalCompositeOperation = "lighter";
+        for (const p of this.particles) {
+          const a = clamp(p.life, 0, 1);
+          ctx.globalAlpha = a;
+          ctx.strokeStyle = `hsl(${p.hue}, 100%, 65%)`;
+          ctx.lineWidth = p.r;
+          ctx.lineCap = "round";
+          ctx.shadowBlur = 14; ctx.shadowColor = `hsl(${p.hue}, 100%, 55%)`;
+          ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * .026, p.y - p.vy * .026); ctx.stroke();
+        }
+        ctx.globalAlpha = 1; ctx.shadowBlur = 0; ctx.globalCompositeOperation = "source-over";
+      }
+    }
+
+    /* --------------------------------------------------------------------------
+       Tool 12: Relaxing Wind Chimes
+    -------------------------------------------------------------------------- */
+    class Chimes {
+      reset() {
+        const count = W < 520 ? 5 : 7;
+        this.rods = Array.from({ length: count }, (_, i) => ({
+          x: W * (i + 1) / (count + 1), anchorY: H * .15,
+          len: H * (.28 + (i % 4) * .055), angle: rand(-.035, .035), vel: 0,
+          width: clamp(W / (count * 8), 9, 15), freq: 280 + i * 67, lastBell: 0, lastSign: 0
+        }));
+      }
+      nudge(x, y, power = 1) {
+        for (const r of this.rods) {
+          const tipX = r.x + Math.sin(r.angle) * r.len;
+          const tipY = r.anchorY + Math.cos(r.angle) * r.len;
+          const d = dist(x, y, tipX, tipY);
+          if (d < 110) r.vel += (x - tipX) * .0008 * power;
+        }
+      }
+      pointerDown(p) { this.nudge(p.x, p.y, 2.4); }
+      pointerMove(p) { if (p.down || dist(p.x,p.y,p.px,p.py) > 2) this.nudge(p.x, p.y, 1.25); }
+      primary() { for (const r of this.rods) r.vel += rand(-.18, .18); audio.bell(440, .07); }
+      update(dt) {
+        const t = now();
+        for (const r of this.rods) {
+          r.vel += -Math.sin(r.angle) * 3.1 * dt;
+          r.vel *= Math.exp(-.48 * dt);
+          r.angle += r.vel * dt;
+          const sign = Math.sign(r.angle);
+          if (sign !== r.lastSign && Math.abs(r.vel) > .055 && t - r.lastBell > .42) {
+            r.lastBell = t; audio.bell(r.freq, clamp(Math.abs(r.vel) * .3, .035, .11));
+          }
+          r.lastSign = sign;
+        }
+      }
+      draw(ctx) {
+        ctx.lineCap = "round";
+        for (let i = 0; i < this.rods.length; i++) {
+          const r = this.rods[i];
+          const tipX = r.x + Math.sin(r.angle) * r.len;
+          const tipY = r.anchorY + Math.cos(r.angle) * r.len;
+          ctx.beginPath(); ctx.moveTo(r.x, 0); ctx.lineTo(r.x, r.anchorY);
+          ctx.strokeStyle = "rgba(194,216,255,.25)"; ctx.lineWidth = 1.2; ctx.stroke();
+          ctx.save(); ctx.translate(r.x, r.anchorY); ctx.rotate(-r.angle);
+          const grad = ctx.createLinearGradient(-r.width, 0, r.width, 0);
+          grad.addColorStop(0, "rgba(80,92,139,.45)");
+          grad.addColorStop(.48, "rgba(230,247,255,.9)");
+          grad.addColorStop(.66, `hsla(${185 + i * 18}, 85%, 72%, .78)`);
+          grad.addColorStop(1, "rgba(56,64,105,.55)");
+          roundedRect(ctx, -r.width / 2, 0, r.width, r.len, r.width / 2);
+          ctx.fillStyle = grad; ctx.shadowBlur = 20; ctx.shadowColor = `hsla(${190+i*16}, 90%, 65%, .28)`; ctx.fill();
+          ctx.restore();
+          ctx.beginPath(); ctx.arc(tipX, tipY, r.width * .74, 0, TAU);
+          ctx.fillStyle = "rgba(214,238,255,.82)"; ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+        const cx = W / 2, cy = H * .1;
+        ctx.beginPath(); ctx.arc(cx, cy, clamp(W * .04, 22, 38), 0, TAU);
+        ctx.fillStyle = "rgba(122,101,255,.28)"; ctx.fill();
+        ctx.strokeStyle = "rgba(194,238,255,.35)"; ctx.stroke();
+      }
+    }
+
+    /* --------------------------------------------------------------------------
+       Tool registry and navigation
+    -------------------------------------------------------------------------- */
+    const tools = [
+      { name: "Bubble Wrap", icon: "◉", key: "1", hint: "Tap or drag across bubbles to pop them.", label: "Interactive Bubble Wrap canvas", instance: new BubbleWrap() },
+      { name: "Push Buttons", icon: "●", key: "2", hint: "Press the glowing buttons for crisp mechanical clicks.", label: "Interactive Push Buttons canvas", instance: new PushButtons() },
+      { name: "Fidget Spinner", icon: "✣", key: "3", hint: "Drag around the center, then flick and release.", label: "Interactive Fidget Spinner canvas", instance: new Spinner() },
+      { name: "Sand Drawing", icon: "⋰", key: "4", hint: "Draw slow trails and watch the grains softly fade.", label: "Interactive Sand Drawing canvas", instance: new SandDrawing() },
+      { name: "Water Ripples", icon: "≋", key: "5", hint: "Touch anywhere to send calm ripples outward.", label: "Interactive Water Ripples canvas", instance: new WaterRipples() },
+      { name: "Rainbow Paint", icon: "⌁", key: "6", hint: "Draw with a luminous color-cycling brush.", label: "Interactive Rainbow Paint canvas", instance: new RainbowPaint() },
+      { name: "Magnetic Balls", icon: "⊕", key: "7", hint: "Move the cursor to attract. Hold Shift to repel.", label: "Interactive Magnetic Balls canvas", instance: new MagneticBalls(), mode: true },
+      { name: "Slime Stretch", icon: "∞", key: "8", hint: "Grab the goo and stretch it in any direction.", label: "Interactive Slime Stretch canvas", instance: new Slime() },
+      { name: "Infinite Dice", icon: "◆", key: "9", hint: "Tap to roll again. There is always another roll.", label: "Interactive Infinite Dice canvas", instance: new Dice() },
+      { name: "Zen Pebbles", icon: "▰", key: "0", hint: "Drag the stones and balance them into a calm stack.", label: "Interactive Zen Pebbles canvas", instance: new Pebbles() },
+      { name: "Particle Burst", icon: "✦", key: "-", hint: "Click anywhere for a bright, crackling explosion.", label: "Interactive Neon Particle Burst canvas", instance: new Burst() },
+      { name: "Wind Chimes", icon: "♬", key: "=", hint: "Brush the hanging rods and let the tones drift.", label: "Interactive Relaxing Wind Chimes canvas", instance: new Chimes() }
+    ];
+
+    function buildNavigation() {
+      const frag = document.createDocumentFragment();
+      tools.forEach((tool, i) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "tool-tab" + (i === 0 ? " active" : "");
+        b.setAttribute("aria-label", `Open ${tool.name}`);
+        b.setAttribute("aria-current", i === 0 ? "true" : "false");
+        b.innerHTML = `<span class="tool-icon" aria-hidden="true">${tool.icon}</span><span class="tool-name">${tool.name}</span><span class="tool-key" aria-hidden="true">${tool.key}</span>`;
+        b.addEventListener("click", () => selectTool(i));
+        frag.appendChild(b);
+      });
+      toolList.appendChild(frag);
+    }
+
+    function selectTool(index) {
+      index = clamp(index, 0, tools.length - 1);
+      if (index === currentIndex && activeTool) return;
+      stage.classList.add("switching");
+      clearTimeout(switchTimer);
+      switchTimer = setTimeout(() => {
+        currentIndex = index;
+        activeTool = tools[index].instance;
+        activeTool.reset?.();
+        stageTitle.textContent = tools[index].name;
+        stageHint.textContent = tools[index].hint;
+        stage.setAttribute("aria-label", tools[index].label);
+        [...toolList.children].forEach((el, i) => {
+          el.classList.toggle("active", i === index);
+          el.setAttribute("aria-current", i === index ? "true" : "false");
+        });
+        const hasMode = !!tools[index].mode;
+        modeBtn.classList.toggle("show", hasMode);
+        if (hasMode) modeBtn.textContent = activeTool.mode > 0 ? "Attract" : "Repel";
+        setStatus(index === 6 ? "Cursor attracts" : "Ready to play");
+        stage.classList.remove("switching");
+        stage.focus({ preventScroll: true });
+        audio.click(.75);
+      }, 135);
+    }
+
+    function resetCurrent() {
+      activeTool?.reset?.();
+      setStatus("Reset complete");
+      audio.click(.85);
+      vibrate(6);
+    }
+
+    /* --------------------------------------------------------------------------
+       Canvas sizing and pointer normalization
+    -------------------------------------------------------------------------- */
+    function resizeCanvases() {
+      DPR = Math.min(devicePixelRatio || 1, 2);
+      const rect = wrap.getBoundingClientRect();
+      W = Math.max(1, rect.width);
+      H = Math.max(1, rect.height);
+      stage.width = Math.round(W * DPR);
+      stage.height = Math.round(H * DPR);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ambient.width = Math.round(innerWidth * DPR);
+      ambient.height = Math.round(innerHeight * DPR);
+      ambient.style.width = innerWidth + "px";
+      ambient.style.height = innerHeight + "px";
+      bgx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      activeTool?.reset?.();
+    }
+
+    function localPoint(e) {
+      const r = stage.getBoundingClientRect();
+      return { x: clamp(e.clientX - r.left, 0, r.width), y: clamp(e.clientY - r.top, 0, r.height) };
+    }
+
+    stage.addEventListener("pointerdown", e => {
+      e.preventDefault();
+      audio.ensure();
+      const p = localPoint(e);
+      pointer.px = pointer.x = p.x; pointer.py = pointer.y = p.y;
+      pointer.down = true; pointer.id = e.pointerId; pointer.pressure = e.pressure || .5; pointer.shift = e.shiftKey;
+      stage.setPointerCapture?.(e.pointerId);
+      activeTool?.pointerDown?.(pointer, e);
+    });
+
+    stage.addEventListener("pointermove", e => {
+      const p = localPoint(e);
+      pointer.px = pointer.x; pointer.py = pointer.y;
+      pointer.x = p.x; pointer.y = p.y; pointer.pressure = e.pressure || pointer.pressure; pointer.shift = e.shiftKey;
+      activeTool?.pointerMove?.(pointer, e);
+    });
+
+    function releasePointer(e) {
+      if (pointer.id !== null && e.pointerId !== pointer.id) return;
+      pointer.down = false;
+      pointer.shift = e.shiftKey;
+      activeTool?.pointerUp?.(pointer, e);
+      pointer.id = null;
+    }
+
+    stage.addEventListener("pointerup", releasePointer);
+    stage.addEventListener("pointercancel", releasePointer);
+    stage.addEventListener("contextmenu", e => e.preventDefault());
+
+    /* --------------------------------------------------------------------------
+       Controls and keyboard shortcuts
+    -------------------------------------------------------------------------- */
+    soundBtn.addEventListener("click", () => audio.toggle());
+    resetBtn.addEventListener("click", resetCurrent);
+    modeBtn.addEventListener("click", () => activeTool?.toggleMode?.());
+
+    window.addEventListener("keydown", e => {
+      if (e.repeat && !["ArrowLeft", "ArrowRight"].includes(e.key)) return;
+      pointer.shift = e.shiftKey;
+      const map = { "1":0,"2":1,"3":2,"4":3,"5":4,"6":5,"7":6,"8":7,"9":8,"0":9,"-":10,"=":11 };
+      if (e.key in map) { e.preventDefault(); selectTool(map[e.key]); return; }
+      if (e.key.toLowerCase() === "s") { e.preventDefault(); audio.toggle(); }
+      else if (e.key.toLowerCase() === "r") { e.preventDefault(); resetCurrent(); }
+      else if (e.code === "Space") { e.preventDefault(); audio.ensure(); activeTool?.primary?.(); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); selectTool((currentIndex + 1) % tools.length); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); selectTool((currentIndex + tools.length - 1) % tools.length); }
+    });
+
+    window.addEventListener("keyup", e => { pointer.shift = e.shiftKey; });
+    window.addEventListener("resize", resizeCanvases, { passive: true });
+    new ResizeObserver(resizeCanvases).observe(wrap);
+
+    /* --------------------------------------------------------------------------
+       Single animation loop for every module
+    -------------------------------------------------------------------------- */
+    function animate(ts) {
+      const dt = clamp((ts - lastFrame) / 1000, 0, .034);
+      lastFrame = ts;
+      drawAmbient(prefersReduced ? 0 : dt);
+      ctx.clearRect(0, 0, W, H);
+      activeTool?.update?.(prefersReduced ? Math.min(dt, .016) : dt);
+      activeTool?.draw?.(ctx);
+      requestAnimationFrame(animate);
+    }
+
+    buildNavigation();
+    activeTool = tools[0].instance;
+    resizeCanvases();
+    activeTool.reset();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
