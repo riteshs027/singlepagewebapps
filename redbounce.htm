@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a1f">
+<title>Red Bounce</title>
+<style>
+  /* ============================================================
+     THEME TOKENS
+     ============================================================ */
+  :root{
+    --ink:        #0a0a1f;
+    --ink-2:      #14112e;
+    --violet:     #9b6cff;
+    --cyan:       #2ee6c8;
+    --red:        #ff2b46;
+    --red-deep:   #b9122c;
+    --amber:      #ffb03a;
+    --text:       #eef0ff;
+    --text-dim:   rgba(238,240,255,.58);
+    --glass:      rgba(255,255,255,.07);
+    --glass-line: rgba(255,255,255,.14);
+    --safe-top:   env(safe-area-inset-top, 0px);
+    --safe-bot:   env(safe-area-inset-bottom, 0px);
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  html,body{
+    height:100%;
+    overflow:hidden;
+    overscroll-behavior:none;
+    touch-action:none;
+    background:var(--ink);
+    color:var(--text);
+    font-family:"Avenir Next","Segoe UI Variable Display",ui-sans-serif,system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    font-weight:600;
+    -webkit-user-select:none; user-select:none;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  #stage{ position:fixed; inset:0; }
+  canvas{ display:block; width:100%; height:100%; }
+
+  /* ============================================================
+     HEADS-UP DISPLAY
+     ============================================================ */
+  #hud{
+    position:absolute; inset:0;
+    padding:calc(14px + var(--safe-top)) 16px 16px;
+    display:flex; align-items:flex-start; justify-content:space-between;
+    pointer-events:none;
+    opacity:0; transition:opacity .35s ease;
+  }
+  #hud.on{ opacity:1; }
+
+  .readout{ line-height:1; }
+  .readout .label{
+    font-size:11px; letter-spacing:.04em; color:var(--text-dim);
+    font-weight:600; margin-bottom:5px;
+  }
+  #score{
+    font-size:clamp(30px,8vw,44px); font-weight:800; letter-spacing:-.03em;
+    font-variant-numeric:tabular-nums;
+    text-shadow:0 0 24px rgba(46,230,200,.45);
+    transition:transform .09s ease-out;
+    transform-origin:left center;
+  }
+  #score.pop{ transform:scale(1.16); }
+  .sub{
+    margin-top:8px; display:flex; gap:18px;
+    font-size:12.5px; color:var(--text-dim);
+    font-variant-numeric:tabular-nums; letter-spacing:.01em;
+  }
+  .sub b{ color:rgba(238,240,255,.85); font-weight:700; }
+
+  .tools{ display:flex; gap:9px; pointer-events:auto; }
+  .icon{
+    width:40px; height:40px; border-radius:13px;
+    background:var(--glass); border:1px solid var(--glass-line);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    color:var(--text); cursor:pointer;
+    display:grid; place-items:center;
+    transition:transform .12s ease, background .15s ease;
+  }
+  .icon:hover{ background:rgba(255,255,255,.13); }
+  .icon:active{ transform:scale(.9); }
+  .icon svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .icon.off{ color:var(--text-dim); }
+  .icon:focus-visible, .btn:focus-visible{ outline:2px solid var(--cyan); outline-offset:3px; }
+
+  /* ============================================================
+     OVERLAY SCREENS
+     ============================================================ */
+  .screen{
+    position:absolute; inset:0; z-index:5;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:0; padding:28px;
+    background:radial-gradient(120% 80% at 50% 40%, rgba(16,12,40,.72), rgba(6,6,18,.93));
+    backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px);
+    text-align:center;
+  }
+  .screen[hidden]{ display:none; }
+
+  .title{
+    font-size:clamp(46px,15vw,92px); font-weight:800;
+    letter-spacing:-.055em; line-height:.86;
+    background:linear-gradient(178deg,#fff 8%,#ff8fa0 46%,var(--red) 78%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 6px 34px rgba(255,43,70,.5));
+  }
+  .tagline{ margin-top:16px; font-size:15px; font-weight:500; color:var(--text-dim); }
+
+  .btn{
+    margin-top:30px;
+    border:0; cursor:pointer; color:#fff;
+    font:inherit; font-size:16px; font-weight:700; letter-spacing:.005em;
+    padding:15px 42px; border-radius:999px;
+    background:linear-gradient(170deg,var(--red),var(--red-deep));
+    box-shadow:0 10px 30px -8px rgba(255,43,70,.75), inset 0 1px 0 rgba(255,255,255,.3);
+    transition:transform .12s cubic-bezier(.2,.9,.3,1.4), box-shadow .18s ease;
+  }
+  .btn:hover{ transform:translateY(-2px); box-shadow:0 16px 38px -8px rgba(255,43,70,.85), inset 0 1px 0 rgba(255,255,255,.3); }
+  .btn:active{ transform:translateY(1px) scale(.97); }
+  .btn.ghost{
+    background:var(--glass); border:1px solid var(--glass-line);
+    box-shadow:none; padding:13px 30px; font-size:14.5px; margin-top:12px;
+  }
+  .btn.ghost:hover{ background:rgba(255,255,255,.13); transform:translateY(-1px); box-shadow:none; }
+
+  .hint{ margin-top:26px; font-size:12.5px; line-height:1.9; color:rgba(238,240,255,.4); font-weight:500; }
+  .hint kbd{
+    font:inherit; font-size:11.5px; font-weight:700;
+    background:var(--glass); border:1px solid var(--glass-line);
+    border-radius:6px; padding:2px 7px; margin:0 1px;
+  }
+
+  /* Game-over panel */
+  .verdict{ font-size:13px; color:var(--text-dim); font-weight:600; }
+  .final{
+    margin-top:4px;
+    font-size:clamp(64px,19vw,104px); font-weight:800; letter-spacing:-.06em; line-height:1;
+    font-variant-numeric:tabular-nums;
+    text-shadow:0 0 40px rgba(46,230,200,.35);
+  }
+  .stats{
+    margin-top:20px; display:flex; gap:10px;
+  }
+  .stat{
+    min-width:104px; padding:11px 16px; border-radius:15px;
+    background:var(--glass); border:1px solid var(--glass-line);
+  }
+  .stat span{ display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:5px; letter-spacing:.03em; }
+  .stat strong{ font-size:19px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+  .crown{ color:var(--amber); text-shadow:0 0 18px rgba(255,176,58,.5); }
+  #newBest{
+    margin-top:14px; font-size:12.5px; font-weight:700; color:var(--amber);
+    letter-spacing:.03em;
+  }
+
+  /* Pause panel */
+  .paused-mark{ font-size:clamp(32px,9vw,46px); font-weight:800; letter-spacing:-.04em; }
+
+  @media (prefers-reduced-motion: reduce){
+    .btn, .icon, #score{ transition:none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <!-- Heads-up display -->
+  <div id="hud">
+    <div class="readout">
+      <div class="label">Score</div>
+      <div id="score">0</div>
+      <div class="sub"><span>Best <b id="bestHud">0</b></span><span><b id="dist">0</b> m climbed</span></div>
+    </div>
+    <div class="tools">
+      <button class="icon" id="btnSound" aria-label="Mute sound">
+        <svg viewBox="0 0 24 24" id="icoSound"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+      </button>
+      <button class="icon" id="btnPause" aria-label="Pause game">
+        <svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg>
+      </button>
+      <button class="icon" id="btnReset" aria-label="Restart game">
+        <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 6.3"/><path d="M20 5v6h-6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Start screen -->
+  <section class="screen" id="scStart">
+    <h1 class="title">RED<br>BOUNCE</h1>
+    <p class="tagline">How long can you survive?</p>
+    <button class="btn" id="btnStart">Start game</button>
+    <p class="hint">
+      <kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> to steer &nbsp;·&nbsp; on mobile, hold either side<br>
+      Land on platforms, dodge the saws, don't fall.
+    </p>
+  </section>
+
+  <!-- Pause screen -->
+  <section class="screen" id="scPause" hidden>
+    <div class="paused-mark">Paused</div>
+    <button class="btn" id="btnResume">Resume</button>
+    <button class="btn ghost" id="btnQuit">Start over</button>
+  </section>
+
+  <!-- Game over screen -->
+  <section class="screen" id="scOver" hidden>
+    <div class="verdict" id="verdict">You fell.</div>
+    <div class="final" id="finalScore">0</div>
+    <div class="stats">
+      <div class="stat"><span>Best</span><strong id="bestOver">0</strong></div>
+      <div class="stat"><span>Climbed</span><strong id="distOver">0 m</strong></div>
+    </div>
+    <div id="newBest" hidden>New personal best</div>
+    <button class="btn" id="btnAgain">Try again</button>
+    <p class="hint">Almost had it. One more run.</p>
+  </section>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+/* ============================================================================
+   1. CONFIGURATION — all tuning values live here
+   ============================================================================ */
+const CFG = {
+  STEP:        1/120,   // fixed physics step (seconds)
+  GRAVITY:     2000,    // px/s²
+  BOUNCE:      -880,    // upward velocity on a normal landing
+  SPRING:      -1420,   // upward velocity from a spring pad
+  MOVE_ACC:    3100,    // horizontal acceleration
+  MAX_VX:      520,     // horizontal speed cap
+  DRAG:        7.5,     // exponential damping when not steering
+  LANE_MAX:    520,     // playfield never gets wider than this (keeps it fair)
+  DEATH_MARGIN:70,      // how far below the view the ball may fall
+  RAMP:        7000,    // px of climb to reach maximum difficulty
+};
+
+const PAL = {
+  normal:  ["#2ee6c8", "#11a68f"],
+  moving:  ["#9b6cff", "#5f34c4"],
+  fragile: ["#ffb03a", "#c4761a"],
+  spring:  ["#b6ff3a", "#6fae12"],
+  hazard:  "#ff6a1f",
+};
+
+/* ============================================================================
+   2. UTILITIES
+   ============================================================================ */
+const rand  = (a, b) => a + Math.random() * (b - a);
+const randI = (a, b) => Math.floor(rand(a, b + 1));
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp  = (a, b, t) => a + (b - a) * t;
+
+function roundRect(ctx, x, y, w, h, r) {
+  r = Math.min(r, w * .5, h * .5);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y,     x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x,     y + h, r);
+  ctx.arcTo(x,     y + h, x,     y,     r);
+  ctx.arcTo(x,     y,     x + w, y,     r);
+  ctx.closePath();
+}
+
+/* Safe localStorage wrapper — private-mode browsers throw on access. */
+const Store = {
+  get(k, fallback) {
+    try { const v = localStorage.getItem(k); return v === null ? fallback : v; }
+    catch { return fallback; }
+  },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* ignore */ } }
+};
+
+/* ============================================================================
+   3. AUDIO — every sound is synthesised with the Web Audio API
+   ============================================================================ */
+const Sound = {
+  ctx: null,
+  muted: Store.get("rb_muted", "0") === "1",
+
+  /* Created lazily on the first user gesture, per browser autoplay policy. */
+  wake() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0.32;
+      this.master.connect(this.ctx.destination);
+    }
+    if (this.ctx.state === "suspended") this.ctx.resume();
+  },
+
+  /* One-shot oscillator with an exponential pitch slide and volume envelope. */
+  tone(f0, f1, dur, type = "sine", vol = 1, delay = 0) {
+    if (this.muted || !this.ctx) return;
+    const t = this.ctx.currentTime + delay;
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(f0, t);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(f1, 1), t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g); g.connect(this.master);
+    osc.start(t); osc.stop(t + dur + 0.02);
+  },
+
+  /* Filtered noise burst — used for impacts and the death crunch. */
+  noise(dur, freq, vol = 0.5) {
+    if (this.muted || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const len = Math.floor(this.ctx.sampleRate * dur);
+    const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = this.ctx.createBufferSource(); src.buffer = buf;
+    const flt = this.ctx.createBiquadFilter();
+    flt.type = "lowpass"; flt.frequency.value = freq;
+    const g = this.ctx.createGain(); g.gain.value = vol;
+    src.connect(flt); flt.connect(g); g.connect(this.master);
+    src.start(t);
+  },
+
+  /* pitch rises slightly with each consecutive landing for a combo feel */
+  bounce(step = 0) {
+    const base = 300 + Math.min(step, 12) * 16;
+    this.tone(base, base * 2.1, 0.11, "triangle", 0.5);
+    this.noise(0.07, 900, 0.22);
+  },
+  spring()  { this.tone(360, 1180, 0.24, "square", 0.32); },
+  crack()   { this.noise(0.18, 2600, 0.4); this.tone(220, 90, 0.2, "sawtooth", 0.22); },
+  over()    {
+    this.noise(0.3, 1400, 0.5);
+    this.tone(420, 60, 0.75, "sawtooth", 0.34);
+    this.tone(210, 40, 0.9, "sine", 0.3, 0.05);
+  },
+  click()   { this.tone(620, 900, 0.06, "square", 0.2); },
+
+  toggle() {
+    this.muted = !this.muted;
+    Store.set("rb_muted", this.muted ? "1" : "0");
+    if (!this.muted) { this.wake(); this.click(); }
+    return this.muted;
+  }
+};
+
+/* ============================================================================
+   4. CANVAS + VIEWPORT
+   ============================================================================ */
+const cv  = document.getElementById("cv");
+const ctx = cv.getContext("2d", { alpha: false });
+
+const View = { w: 0, h: 0, dpr: 1, lane: 0, laneX: 0 };
+
+function resize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  View.dpr = Math.min(window.devicePixelRatio || 1, 2);
+  View.w = w; View.h = h;
+  cv.width  = Math.round(w * View.dpr);
+  cv.height = Math.round(h * View.dpr);
+  ctx.setTransform(View.dpr, 0, 0, View.dpr, 0, 0);
+
+  // The playfield ("lane") is centred and capped so wide monitors don't trivialise the game.
+  View.lane  = Math.min(w, CFG.LANE_MAX);
+  View.laneX = (w - View.lane) * 0.5;
+
+  buildBackdrop();
+  if (!G.ball) return;
+  if (G.mode === "menu") {
+    resetWorld();                        // idle scene can be rebuilt safely
+  } else {                               // mid-run: nudge the level into the new lane
+    for (const p of G.platforms) {
+      p.w = Math.min(p.w, View.lane);
+      p.x = clamp(p.x, 0, View.lane - p.w);
+      if (p.type === "moving") {
+        p.amp = Math.min(p.amp, Math.max(0, (View.lane - p.w) / 2));
+        p.home = clamp(p.home, p.amp, Math.max(p.amp, View.lane - p.w - p.amp));
+      }
+    }
+    for (const s of G.saws) {
+      s.amp = Math.min(s.amp, View.lane / 2);
+      s.home = clamp(s.home, s.amp, Math.max(s.amp, View.lane - s.amp));
+    }
+    G.ball.x = clamp(G.ball.x, G.ball.r, View.lane - G.ball.r);
+  }
+}
+
+/* ============================================================================
+   5. BACKDROP — cached gradient + parallax star layers
+   ============================================================================ */
+let skyGrad = null;
+const stars = [];
+
+function buildBackdrop() {
+  skyGrad = ctx.createLinearGradient(0, 0, 0, View.h);
+  skyGrad.addColorStop(0,   "#070718");
+  skyGrad.addColorStop(.45, "#141033");
+  skyGrad.addColorStop(1,   "#241a3d");
+
+  stars.length = 0;
+  const n = Math.round(View.w * View.h / 9000);
+  for (let i = 0; i < n; i++) {
+    stars.push({
+      x: Math.random() * View.w,
+      y: Math.random() * View.h,
+      r: rand(0.5, 1.7),
+      a: rand(0.15, 0.75),
+      depth: rand(0.06, 0.34),          // parallax factor
+      tw: rand(0, Math.PI * 2)          // twinkle phase
+    });
+  }
+}
+
+/* ============================================================================
+   6. PARTICLES
+   ============================================================================ */
+const particles = [];
+
+function burst(x, y, count, color, opt = {}) {
+  const spread = opt.spread ?? Math.PI,
+        dir    = opt.dir ?? -Math.PI / 2,
+        speed  = opt.speed ?? 220,
+        grav   = opt.grav ?? 900,
+        size   = opt.size ?? 3.4;
+  for (let i = 0; i < count; i++) {
+    const a = dir + rand(-spread, spread) * 0.5;
+    const s = speed * rand(0.25, 1);
+    particles.push({
+      x, y,
+      vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+      r: size * rand(0.5, 1.3),
+      life: rand(0.3, 0.75), max: 0.75,
+      g: grav, color
+    });
+  }
+  if (particles.length > 420) particles.splice(0, particles.length - 420);
+}
+
+function updateParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.life -= dt;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    p.vy += p.g * dt;
+    p.vx *= 0.985;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+  }
+}
+
+/* Floating "+10" style score pops */
+const pops = [];
+function addPop(x, y, text) {
+  pops.push({ x, y, text, life: 0.8 });
+  if (pops.length > 12) pops.shift();
+}
+
+/* ============================================================================
+   7. GAME STATE
+   ============================================================================ */
+const G = {
+  mode: "menu",            // menu | playing | paused | over
+  ball: null,
+  platforms: [],
+  saws: [],
+  cam: 0,                  // world-y at the top of the view
+  camShake: 0,
+  nextY: 0,                // world-y where the next row spawns
+  startY: 0,
+  climb: 0,
+  score: 0,
+  best: parseInt(Store.get("rb_best", "0"), 10) || 0,
+  combo: 0,
+  deathT: 0,
+  acc: 0,
+  wall: null,              // side-wall impact flash
+  lastX: 0,                // centre of the last generated platform
+};
+
+function makeBall() {
+  const r = clamp(View.lane * 0.036, 11, 17);
+  return {
+    x: View.lane * 0.5, y: -r - 10,
+    vx: 0, vy: 0, r,
+    squash: 0,               // 1 = flat from impact, -1 = stretched in flight
+    trail: []
+  };
+}
+
+/* ----- Level generation -------------------------------------------------- */
+
+/* difficulty ramps 0 → 1 over the first CFG.RAMP pixels of climb */
+const diff = () => clamp(G.climb / CFG.RAMP, 0, 1);
+
+function platWidth() {
+  const d = diff();
+  return clamp(View.lane * (0.30 - 0.12 * d), 52, 150);
+}
+
+function addPlatform(x, y, w, type) {
+  const p = { x, y, w, h: 15, type, broken: 0, alpha: 1, spikes: false, t: rand(0, 9) };
+  if (type === "moving") {
+    const room = Math.max(0, (View.lane - w) / 2);
+    p.amp   = Math.min(rand(View.lane * 0.14, View.lane * 0.3), room);
+    p.speed = rand(0.5, 0.95) + diff() * 0.5;
+    p.home  = clamp(x, p.amp, Math.max(p.amp, View.lane - w - p.amp));
+    p.x = p.home;
+  }
+  G.platforms.push(p);
+  return p;
+}
+
+/* Builds one horizontal row of the level, then steps nextY upward. */
+function spawnRow() {
+  const d = diff();
+  // Gaps stay inside the ball's 193px jump arc, with margin, even at max difficulty.
+  const gap = rand(86 + 30 * d, 118 + 34 * d);
+  G.nextY -= gap;
+
+  // Without edge wrapping, a row must be reachable from the last one, so the next
+  // slab's centre stays inside the horizontal distance one jump arc can cover.
+  const w = platWidth();
+  const reach = clamp(View.lane * 0.6, 150, 320);
+  const lo = Math.max(w / 2, G.lastX - reach);
+  const hi = Math.min(View.lane - w / 2, G.lastX + reach);
+  const cx = hi > lo ? rand(lo, hi) : View.lane / 2;
+  const x = clamp(cx - w / 2, 0, Math.max(0, View.lane - w));
+  G.lastX = x + w / 2;
+
+  // Pick a platform flavour. Springs stay rare; fragile/moving grow with difficulty.
+  const roll = Math.random();
+  let type = "normal";
+  if      (roll < 0.07)                 type = "spring";
+  else if (roll < 0.07 + 0.12 + 0.26*d) type = "moving";
+  else if (roll < 0.30 + 0.38 * d)      type = "fragile";
+  const main = addPlatform(x, G.nextY, w, type);
+
+  // Sometimes a second platform shares the row; it may be spiked, because the
+  // first one guarantees a safe landing.
+  if (Math.random() < 0.16 + 0.24 * d) {
+    const w2 = platWidth() * rand(0.6, 0.95);
+    const gapSpace = 26;
+    const leftRoom  = x - gapSpace - w2;                 // free space left of the main slab
+    const rightRoom = View.lane - (x + w + gapSpace) - w2;
+    let x2 = -1;
+    if (leftRoom > 0 && (rightRoom <= 0 || Math.random() < 0.5)) x2 = rand(0, leftRoom);
+    else if (rightRoom > 0) x2 = rand(x + w + gapSpace, View.lane - w2);
+    if (x2 >= 0) {
+      const p2 = addPlatform(x2, G.nextY + rand(-10, 10), w2, "normal");
+      // Spikes only ever go on the extra slab, so the row always has a safe landing.
+      if (G.nextY < -650 && Math.random() < 0.35 + 0.4 * d && main.type !== "spring") p2.spikes = true;
+    }
+  }
+
+  // Saw blades drift through the gaps between rows — never in the opening stretch,
+  // so the first few jumps are always a fair warm-up.
+  if (G.nextY < -650 && Math.random() < 0.06 + 0.4 * d) {
+    const r = clamp(View.lane * 0.042, 13, 20);
+    const amp = rand(View.lane * 0.18, View.lane * 0.36);
+    G.saws.push({
+      home: clamp(rand(0, View.lane), amp, Math.max(amp, View.lane - amp)),
+      y: G.nextY + gap * rand(0.35, 0.62),
+      r, amp,
+      speed: rand(0.55, 1.05) + d * 0.6,
+      phase: rand(0, 6.28),
+      x: 0, spin: rand(0, 6.28)
+    });
+  }
+}
+
+function ensureLevel() {
+  while (G.nextY > G.cam - View.h * 1.4) spawnRow();
+  // cull anything well below the view
+  const cut = G.cam + View.h + 260;
+  for (let i = G.platforms.length - 1; i >= 0; i--) if (G.platforms[i].y > cut) G.platforms.splice(i, 1);
+  for (let i = G.saws.length - 1; i >= 0; i--)      if (G.saws[i].y > cut)      G.saws.splice(i, 1);
+}
+
+/* ----- Lifecycle --------------------------------------------------------- */
+function resetWorld() {
+  G.platforms.length = 0;
+  G.saws.length = 0;
+  particles.length = 0;
+  pops.length = 0;
+  G.ball = makeBall();
+  G.climb = 0; G.score = 0; G.combo = 0; G.camShake = 0; G.deathT = 0; G.acc = 0; G.wall = null;
+
+  // Ground slab the ball starts on
+  const ground = addPlatform(0, 0, View.lane, "normal");
+  ground.h = 26; ground.ground = true;
+
+  G.nextY = -30;
+  G.lastX = View.lane / 2;
+  G.startY = G.ball.y;
+  G.cam = -View.h + 130;              // ground sits low in frame at the start
+  for (let i = 0; i < 14; i++) spawnRow();
+  syncHUD();
+}
+
+function startGame() {
+  Sound.wake();
+  resetWorld();
+  G.mode = "playing";
+  show(null);
+  hud.classList.add("on");
+}
+
+function gameOver(reason) {
+  if (G.mode !== "playing") return;
+  G.mode = "over";
+  G.deathT = 0;
+  G.camShake = Math.max(G.camShake, 26);
+  burst(G.ball.x, G.ball.y, 46, "#ff2b46", { spread: Math.PI * 2, dir: 0, speed: 480, grav: 700, size: 4.2 });
+  burst(G.ball.x, G.ball.y, 18, "#ffd0d6", { spread: Math.PI * 2, dir: 0, speed: 260, grav: 500, size: 2.6 });
+  Sound.over();
+
+  const fresh = G.score > G.best;
+  if (fresh) { G.best = G.score; Store.set("rb_best", String(G.best)); }
+
+  verdict.textContent = reason;
+  finalScore.textContent = G.score;
+  bestOver.textContent = G.best;
+  distOver.textContent = Math.floor(G.climb / 10) + " m";
+  bestOver.classList.toggle("crown", fresh);
+  newBest.hidden = !fresh;
+
+  setTimeout(() => { if (G.mode === "over") show(scOver); }, 620);
+}
+
+/* ============================================================================
+   8. INPUT
+   ============================================================================ */
+const keys = { left: false, right: false };
+let touchSteer = 0;               // -1 … 1 from touch/drag
+const activeTouch = new Map();
+
+addEventListener("keydown", e => {
+  const k = e.key.toLowerCase();
+  if (["arrowleft","arrowright","arrowup","arrowdown"," ","spacebar"].includes(k)) e.preventDefault();
+  if (k === "arrowleft"  || k === "a") keys.left = true;
+  if (k === "arrowright" || k === "d") keys.right = true;
+  if (k === " " || k === "enter") {
+    if (G.mode === "menu") startGame();
+    else if (G.mode === "over") startGame();
+    else if (G.mode === "paused") setPaused(false);
+  }
+  if (k === "p" || k === "escape") { if (G.mode === "playing") setPaused(true); else if (G.mode === "paused") setPaused(false); }
+  if (k === "r" && G.mode !== "menu") startGame();
+  if (k === "m") applyMute(Sound.toggle());
+}, { passive: false });
+
+addEventListener("keyup", e => {
+  const k = e.key.toLowerCase();
+  if (k === "arrowleft"  || k === "a") keys.left = false;
+  if (k === "arrowright" || k === "d") keys.right = false;
+});
+
+/* Touch: hold a side to steer, or drag to aim the ball toward your finger. */
+function touchPoint(t) {
+  const lx = t.clientX - View.laneX;
+  const ballScreenX = G.ball ? G.ball.x : View.lane / 2;
+  const delta = lx - ballScreenX;
+  if (Math.abs(delta) < 14) {                       // deadzone → fall back to side-hold
+    return lx < View.lane / 2 ? -1 : 1;
+  }
+  return clamp(delta / (View.lane * 0.32), -1, 1);
+}
+function readTouches() {
+  if (!activeTouch.size) { touchSteer = 0; return; }
+  let sum = 0;
+  for (const v of activeTouch.values()) sum += v;
+  touchSteer = clamp(sum / activeTouch.size, -1, 1);
+}
+cv.addEventListener("touchstart", e => {
+  e.preventDefault();
+  Sound.wake();
+  for (const t of e.changedTouches) activeTouch.set(t.identifier, touchPoint(t));
+  readTouches();
+}, { passive: false });
+cv.addEventListener("touchmove", e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) if (activeTouch.has(t.identifier)) activeTouch.set(t.identifier, touchPoint(t));
+  readTouches();
+}, { passive: false });
+const endTouch = e => {
+  for (const t of e.changedTouches) activeTouch.delete(t.identifier);
+  readTouches();
+};
+cv.addEventListener("touchend", endTouch, { passive: true });
+cv.addEventListener("touchcancel", endTouch, { passive: true });
+
+/* Mouse steering on desktop is a nice extra, but keyboard stays primary. */
+let mouseDown = false, mouseSteer = 0;
+cv.addEventListener("mousedown", e => { mouseDown = true; mouseSteer = ((e.clientX - View.laneX) < View.lane / 2 ? -1 : 1); Sound.wake(); });
+cv.addEventListener("mousemove", e => { if (mouseDown) mouseSteer = ((e.clientX - View.laneX) < View.lane / 2 ? -1 : 1); });
+addEventListener("mouseup", () => { mouseDown = false; mouseSteer = 0; });
+
+/* Block page scroll / pull-to-refresh everywhere outside the canvas too. */
+document.addEventListener("touchmove", e => e.preventDefault(), { passive: false });
+addEventListener("contextmenu", e => e.preventDefault());
+addEventListener("blur", () => { if (G.mode === "playing") setPaused(true); });
+document.addEventListener("visibilitychange", () => { if (document.hidden && G.mode === "playing") setPaused(true); });
+
+function steerInput() {
+  let s = 0;
+  if (keys.left)  s -= 1;
+  if (keys.right) s += 1;
+  if (s === 0) s = touchSteer || mouseSteer;
+  return clamp(s, -1, 1);
+}
+
+/* ============================================================================
+   9. PHYSICS + SIMULATION
+   ============================================================================ */
+function physics(dt) {
+  const b = G.ball;
+  const live = G.mode === "playing";
+
+  // --- horizontal steering -------------------------------------------------
+  const s = live ? steerInput() : 0;
+  if (s !== 0) {
+    b.vx += s * CFG.MOVE_ACC * dt;
+    b.vx = clamp(b.vx, -CFG.MAX_VX, CFG.MAX_VX);
+  } else {
+    b.vx *= Math.exp(-CFG.DRAG * dt);
+  }
+
+  // --- gravity -------------------------------------------------------------
+  b.vy += CFG.GRAVITY * dt;
+  const prevBottom = b.y + b.r;
+  b.x += b.vx * dt;
+  b.y += b.vy * dt;
+
+  // Solid side walls: the ball stays on screen and rebounds off the edges.
+  if (b.x < b.r) {
+    b.x = b.r;
+    if (b.vx < -40) { b.vx = -b.vx * 0.55; wallHit(b, b.r, 1); } else b.vx = 0;
+  } else if (b.x > View.lane - b.r) {
+    b.x = View.lane - b.r;
+    if (b.vx > 40) { b.vx = -b.vx * 0.55; wallHit(b, View.lane - b.r, -1); } else b.vx = 0;
+  }
+
+  // squash/stretch eases back toward neutral
+  b.squash = lerp(b.squash, b.vy < -300 ? -0.22 : 0, 1 - Math.exp(-10 * dt));
+
+  // --- moving platforms ----------------------------------------------------
+  for (const p of G.platforms) {
+    p.t += dt;
+    if (p.type === "moving" && !p.broken) p.x = p.home + Math.sin(p.t * p.speed) * p.amp;
+    if (p.broken) { p.broken += dt; p.alpha = Math.max(0, 1 - p.broken * 2.2); p.y += 340 * dt; }
+  }
+  for (let i = G.platforms.length - 1; i >= 0; i--) if (G.platforms[i].alpha <= 0) G.platforms.splice(i, 1);
+
+  // --- saws ----------------------------------------------------------------
+  for (const sw of G.saws) {
+    sw.phase += dt * sw.speed;
+    sw.x = sw.home + Math.sin(sw.phase) * sw.amp;
+    sw.spin += dt * 9;
+  }
+
+  // --- platform collision (only while falling) -----------------------------
+  const bottom = b.y + b.r;
+  if (b.vy > 0) {
+    for (const p of G.platforms) {
+      if (p.broken) continue;
+      if (b.x + b.r * 0.75 < p.x || b.x - b.r * 0.75 > p.x + p.w) continue;
+      if (prevBottom > p.y + 2 || bottom < p.y) continue;      // swept top-edge test
+
+      if (p.spikes && live) { gameOver("Spiked."); return; }
+
+      land(b, p, live);
+      break;
+    }
+  }
+
+  // --- hazards -------------------------------------------------------------
+  if (live) {
+    for (const sw of G.saws) {
+      const dx = b.x - sw.x, dy = b.y - sw.y;
+      if (dx * dx + dy * dy < (b.r + sw.r - 4) ** 2) { gameOver("Sliced."); return; }
+    }
+    if (b.y - G.cam > View.h + CFG.DEATH_MARGIN) { gameOver("You fell."); return; }
+  } else if (G.mode === "menu" && b.y > 400) {
+    // safety net for the idle demo bounce
+    b.y = -b.r; b.vy = CFG.BOUNCE;
+  }
+
+  // --- camera (climbs with the ball, never scrolls back down) --------------
+  if (live) {
+    const target = b.y - View.h * 0.62;
+    if (target < G.cam) G.cam = lerp(G.cam, target, 1 - Math.exp(-9 * dt));
+  }
+
+  // --- scoring -------------------------------------------------------------
+  if (live) {
+    const climb = Math.max(0, G.startY - b.y);
+    if (climb > G.climb) {
+      const gained = Math.floor(climb / 10) - Math.floor(G.climb / 10);
+      G.climb = climb;
+      if (gained > 0) { G.score += gained; syncHUD(); }
+    }
+    ensureLevel();
+  }
+
+  // --- trail ---------------------------------------------------------------
+  b.trail.push({ x: b.x, y: b.y });
+  if (b.trail.length > 11) b.trail.shift();
+}
+
+/* Side-wall impact: soft rebound, a dull thud and a flash on that edge. */
+function wallHit(b, x, dir) {
+  Sound.tone(190, 110, 0.09, "sine", 0.22);
+  burst(x, b.y, 6, "#a9b6ff", { dir: dir > 0 ? 0 : Math.PI, spread: 1.1, speed: 170, grav: 600, size: 2.4 });
+  G.camShake = Math.max(G.camShake, 1.6);
+  G.wall = { side: dir > 0 ? 0 : 1, t: 0.3, y: b.y };
+}
+
+/* Landing resolution: bounce, sound, particles, score, platform reaction. */
+function land(b, p, live) {
+  b.y = p.y - b.r;
+
+  if (p.type === "spring") {
+    b.vy = CFG.SPRING;
+    b.squash = 1;
+    p.t = 0; p.pressed = 0.35;
+    Sound.spring();
+    burst(b.x, p.y, 16, PAL.spring[0], { speed: 340, size: 3.2 });
+    if (live && !p.scored) { p.scored = true; G.score += 25; G.combo++; addPop(b.x, p.y, "+25"); syncHUD(true); }
+    return;
+  }
+
+  // A little variance keeps the rhythm from feeling mechanical.
+  b.vy = CFG.BOUNCE * rand(0.97, 1.04);
+  b.squash = 1;
+  G.camShake = Math.max(G.camShake, 2.2);
+  Sound.bounce(G.combo);
+  burst(b.x, p.y, 9, p.type === "fragile" ? PAL.fragile[0] : PAL.normal[0], { speed: 200, size: 2.8 });
+
+  if (p.type === "fragile") {
+    p.broken = 0.0001;
+    Sound.crack();
+    burst(b.x, p.y + 6, 12, PAL.fragile[1], { spread: Math.PI * 2, dir: 0, speed: 200, grav: 1100, size: 2.6 });
+  }
+
+  // Points are awarded per platform, not per bounce — camping one slab earns nothing.
+  if (live && !p.ground && !p.scored) {
+    p.scored = true;
+    G.combo++;
+    const pts = 10 + Math.min(G.combo, 10);
+    G.score += pts;
+    addPop(b.x, p.y, "+" + pts);
+    syncHUD(true);
+  } else if (live && p.scored) {
+    G.combo = 0;                      // breaking the chain resets the bonus
+  }
+}
+
+/* ============================================================================
+   10. RENDERING
+   ============================================================================ */
+function render(time) {
+  const shakeX = G.camShake ? rand(-G.camShake, G.camShake) : 0;
+  const shakeY = G.camShake ? rand(-G.camShake, G.camShake) : 0;
+
+  // sky
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, View.w, View.h);
+
+  // parallax starfield + soft nebula glow
+  ctx.save();
+  ctx.translate(shakeX * 0.3, shakeY * 0.3);
+  const glowY = View.h * 0.3 + Math.sin(time * 0.00012) * 40;
+  const neb = ctx.createRadialGradient(View.w * 0.7, glowY, 0, View.w * 0.7, glowY, View.w * 0.8);
+  neb.addColorStop(0, "rgba(155,108,255,.16)");
+  neb.addColorStop(1, "rgba(155,108,255,0)");
+  ctx.fillStyle = neb;
+  ctx.fillRect(0, 0, View.w, View.h);
+
+  for (const st of stars) {
+    const y = ((st.y - G.cam * st.depth) % View.h + View.h) % View.h;
+    ctx.globalAlpha = st.a * (0.65 + 0.35 * Math.sin(time * 0.002 + st.tw));
+    ctx.fillStyle = "#dfe4ff";
+    ctx.fillRect(st.x, y, st.r, st.r);
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // world space
+  ctx.save();
+  ctx.translate(View.laneX + shakeX, -G.cam + shakeY);
+
+  drawPlatforms(time);
+  drawSaws();
+  drawParticles();
+  if (G.mode !== "over" || G.deathT < 0.12) drawBall(time);
+  drawPops();
+
+  ctx.restore();
+
+  // letterbox the area outside the lane on wide screens
+  if (View.laneX > 0) {
+    ctx.fillStyle = "rgba(4,4,12,.55)";
+    ctx.fillRect(0, 0, View.laneX, View.h);
+    ctx.fillRect(View.laneX + View.lane, 0, View.laneX + 2, View.h);
+  }
+  drawWalls(shakeX);
+
+  // vignette keeps the eye centred
+  const vg = ctx.createRadialGradient(View.w/2, View.h/2, View.h*0.35, View.w/2, View.h/2, View.h*0.85);
+  vg.addColorStop(0, "rgba(0,0,0,0)");
+  vg.addColorStop(1, "rgba(0,0,0,.45)");
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, View.w, View.h);
+}
+
+/* The two side walls: a thin luminous rail that lights up where the ball hits. */
+function drawWalls(shakeX) {
+  const edges = [View.laneX + shakeX, View.laneX + View.lane + shakeX];
+  for (let i = 0; i < 2; i++) {
+    const x = edges[i], inward = i === 0 ? 1 : -1;
+
+    // soft inner glow falling away from the rail
+    const g = ctx.createLinearGradient(x, 0, x + inward * 26, 0);
+    g.addColorStop(0, "rgba(155,108,255,.22)");
+    g.addColorStop(1, "rgba(155,108,255,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(Math.min(x, x + inward * 26), 0, 26, View.h);
+
+    // the rail itself
+    ctx.fillStyle = "rgba(178,150,255,.5)";
+    ctx.fillRect(i === 0 ? x : x - 2, 0, 2, View.h);
+
+    // impact flash centred on the contact point
+    if (G.wall && G.wall.side === i && G.wall.t > 0) {
+      const y = G.wall.y - G.cam;
+      const a = clamp(G.wall.t / 0.3, 0, 1);
+      const f = ctx.createRadialGradient(x, y, 0, x, y, 90);
+      f.addColorStop(0, `rgba(220,210,255,${0.5 * a})`);
+      f.addColorStop(1, "rgba(220,210,255,0)");
+      ctx.fillStyle = f;
+      ctx.fillRect(Math.min(x, x + inward * 90), y - 90, 90, 180);
+    }
+  }
+}
+
+function drawPlatforms(time) {
+  const top = G.cam - 40, bot = G.cam + View.h + 60;
+  for (const p of G.platforms) {
+    if (p.y < top || p.y > bot) continue;
+    const colors = PAL[p.type] || PAL.normal;
+    ctx.globalAlpha = p.alpha;
+
+    const press = p.pressed ? Math.max(0, p.pressed) : 0;
+    if (p.pressed) p.pressed -= 0.02;
+    const h = p.h - press * 12;
+    const y = p.y + (p.h - h);
+
+    // drop shadow
+    ctx.fillStyle = "rgba(0,0,0,.35)";
+    roundRect(ctx, p.x + 2, y + 5, p.w, h, h * 0.45); ctx.fill();
+
+    // body
+    const g = ctx.createLinearGradient(0, y, 0, y + h);
+    g.addColorStop(0, colors[0]); g.addColorStop(1, colors[1]);
+    ctx.fillStyle = g;
+    ctx.shadowColor = colors[0]; ctx.shadowBlur = 14;
+    roundRect(ctx, p.x, y, p.w, h, h * 0.45); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // top highlight
+    ctx.fillStyle = "rgba(255,255,255,.4)";
+    roundRect(ctx, p.x + 5, y + 2.5, p.w - 10, 2.5, 1.5); ctx.fill();
+
+    // spring coil marker
+    if (p.type === "spring") {
+      ctx.strokeStyle = "rgba(10,25,0,.6)"; ctx.lineWidth = 2;
+      const cx = p.x + p.w / 2;
+      ctx.beginPath();
+      for (let i = -1; i <= 1; i++) { ctx.moveTo(cx + i * 8, y + 4); ctx.lineTo(cx + i * 8, y + h - 4); }
+      ctx.stroke();
+    }
+    // fragile crack lines
+    if (p.type === "fragile") {
+      ctx.strokeStyle = "rgba(60,25,0,.45)"; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(p.x + p.w * .3, y + 2); ctx.lineTo(p.x + p.w * .38, y + h - 2);
+      ctx.moveTo(p.x + p.w * .68, y + 2); ctx.lineTo(p.x + p.w * .6, y + h - 2);
+      ctx.stroke();
+    }
+
+    // spike row
+    if (p.spikes) {
+      const sp = 13, n = Math.max(2, Math.floor(p.w / sp)), step = p.w / n;
+      const grd = ctx.createLinearGradient(0, y - 14, 0, y);
+      grd.addColorStop(0, "#ffd08a"); grd.addColorStop(1, PAL.hazard);
+      ctx.fillStyle = grd;
+      ctx.shadowColor = PAL.hazard; ctx.shadowBlur = 12;
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) {
+        const x0 = p.x + i * step;
+        ctx.moveTo(x0, y);
+        ctx.lineTo(x0 + step / 2, y - 14);
+        ctx.lineTo(x0 + step, y);
+      }
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawSaws() {
+  const top = G.cam - 60, bot = G.cam + View.h + 60;
+  for (const s of G.saws) {
+    if (s.y < top || s.y > bot) continue;
+    ctx.save();
+    ctx.translate(s.x, s.y);
+
+    // danger halo
+    const halo = ctx.createRadialGradient(0, 0, s.r * 0.4, 0, 0, s.r * 2.1);
+    halo.addColorStop(0, "rgba(255,106,31,.34)");
+    halo.addColorStop(1, "rgba(255,106,31,0)");
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(0, 0, s.r * 2.1, 0, 6.2832); ctx.fill();
+
+    ctx.rotate(s.spin);
+    // teeth
+    ctx.fillStyle = "#d8dcf0";
+    ctx.beginPath();
+    const teeth = 8;
+    for (let i = 0; i < teeth; i++) {
+      const a0 = (i / teeth) * 6.2832;
+      const a1 = ((i + 0.5) / teeth) * 6.2832;
+      ctx.lineTo(Math.cos(a0) * s.r * 1.32, Math.sin(a0) * s.r * 1.32);
+      ctx.lineTo(Math.cos(a1) * s.r * 0.92, Math.sin(a1) * s.r * 0.92);
+    }
+    ctx.closePath(); ctx.fill();
+
+    // hub
+    const hub = ctx.createLinearGradient(-s.r, -s.r, s.r, s.r);
+    hub.addColorStop(0, "#ff9a4d"); hub.addColorStop(1, "#c93c06");
+    ctx.fillStyle = hub;
+    ctx.beginPath(); ctx.arc(0, 0, s.r * 0.82, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = "rgba(10,10,25,.85)";
+    ctx.beginPath(); ctx.arc(0, 0, s.r * 0.24, 0, 6.2832); ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawBall(time) {
+  const b = G.ball;
+  // squash/stretch: fat on impact, tall in fast ascent
+  const sq = clamp(b.squash, -0.3, 1);
+  const sx = 1 + sq * 0.34, sy = 1 - sq * 0.34;
+
+  // trail
+  for (let i = 0; i < b.trail.length; i++) {
+    const t = b.trail[i], k = i / b.trail.length;
+    ctx.globalAlpha = k * 0.22;
+    ctx.fillStyle = "#ff2b46";
+    ctx.beginPath(); ctx.arc(t.x, t.y, b.r * (0.35 + k * 0.55), 0, 6.2832); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // ground shadow on the nearest platform below
+  let below = null;
+  for (const p of G.platforms) {
+    if (p.broken) continue;
+    if (p.y > b.y && b.x > p.x && b.x < p.x + p.w && (!below || p.y < below.y)) below = p;
+  }
+  if (below) {
+    const d = clamp(1 - (below.y - b.y) / 260, 0, 1);
+    ctx.globalAlpha = 0.32 * d;
+    ctx.fillStyle = "#000";
+    ctx.beginPath(); ctx.ellipse(b.x, below.y + 1, b.r * (0.5 + d * 0.7), b.r * 0.3, 0, 0, 6.2832); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.save();
+  ctx.translate(b.x, b.y);
+  ctx.scale(sx, sy);
+
+  ctx.shadowColor = "rgba(255,43,70,.9)";
+  ctx.shadowBlur = 26;
+  const g = ctx.createRadialGradient(-b.r * 0.35, -b.r * 0.4, b.r * 0.15, 0, 0, b.r * 1.1);
+  g.addColorStop(0, "#ff8d9d");
+  g.addColorStop(0.45, "#ff2b46");
+  g.addColorStop(1, "#a30f26");
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(0, 0, b.r, 0, 6.2832); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // specular highlight
+  ctx.fillStyle = "rgba(255,255,255,.75)";
+  ctx.beginPath(); ctx.ellipse(-b.r * 0.34, -b.r * 0.42, b.r * 0.22, b.r * 0.15, -0.6, 0, 6.2832); ctx.fill();
+  ctx.restore();
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    ctx.globalAlpha = clamp(p.life / p.max, 0, 1);
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.2832); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawPops() {
+  ctx.textAlign = "center";
+  ctx.font = "700 15px ui-sans-serif, system-ui, sans-serif";
+  for (const p of pops) {
+    ctx.globalAlpha = clamp(p.life, 0, 1) * 0.9;
+    ctx.fillStyle = "#eaf7ff";
+    ctx.fillText(p.text, p.x, p.y - (0.8 - p.life) * 46 - 14);
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* ============================================================================
+   11. MAIN LOOP — started exactly once, drives every mode
+   ============================================================================ */
+let last = performance.now();
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  let dt = (now - last) / 1000;
+  last = now;
+  if (dt > 0.1) dt = 0.1;                 // clamp after tab switches
+
+  if (G.mode !== "paused") {
+    // fixed-step physics keeps bounces identical on every refresh rate
+    if (G.mode === "playing" || G.mode === "menu") {
+      G.acc += dt;
+      let steps = 0;
+      while (G.acc >= CFG.STEP && steps < 8) { physics(CFG.STEP); G.acc -= CFG.STEP; steps++; }
+      if (steps === 8) G.acc = 0;
+    }
+    if (G.mode === "over") G.deathT += dt;
+    updateParticles(dt);
+    for (let i = pops.length - 1; i >= 0; i--) { pops[i].life -= dt; if (pops[i].life <= 0) pops.splice(i, 1); }
+    if (G.wall && G.wall.t > 0) G.wall.t -= dt;
+    G.camShake *= Math.exp(-6 * dt);
+    if (G.camShake < 0.3) G.camShake = 0;
+  }
+
+  render(now);
+}
+
+/* ============================================================================
+   12. UI WIRING
+   ============================================================================ */
+const hud        = document.getElementById("hud");
+const scoreEl    = document.getElementById("score");
+const bestHud    = document.getElementById("bestHud");
+const distEl     = document.getElementById("dist");
+const scStart    = document.getElementById("scStart");
+const scPause    = document.getElementById("scPause");
+const scOver     = document.getElementById("scOver");
+const verdict    = document.getElementById("verdict");
+const finalScore = document.getElementById("finalScore");
+const bestOver   = document.getElementById("bestOver");
+const distOver   = document.getElementById("distOver");
+const newBest    = document.getElementById("newBest");
+const btnSound   = document.getElementById("btnSound");
+const icoSound   = document.getElementById("icoSound");
+
+function show(el) {
+  for (const s of [scStart, scPause, scOver]) s.hidden = (s !== el);
+}
+
+let popTimer = null;
+function syncHUD(pulse) {
+  scoreEl.textContent = G.score;
+  bestHud.textContent = Math.max(G.best, G.score);
+  distEl.textContent = Math.floor(G.climb / 10);
+  if (pulse) {
+    scoreEl.classList.add("pop");
+    clearTimeout(popTimer);
+    popTimer = setTimeout(() => scoreEl.classList.remove("pop"), 100);
+  }
+}
+
+function setPaused(on) {
+  if (on && G.mode === "playing") { G.mode = "paused"; show(scPause); }
+  else if (!on && G.mode === "paused") { G.mode = "playing"; last = performance.now(); show(null); }
+}
+
+function applyMute(muted) {
+  btnSound.classList.toggle("off", muted);
+  btnSound.setAttribute("aria-label", muted ? "Unmute sound" : "Mute sound");
+  icoSound.innerHTML = muted
+    ? '<path d="M11 5 6 9H3v6h3l5 4z"/><path d="m16 9 5 6M21 9l-5 6"/>'
+    : '<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/>';
+}
+
+/* Buttons are bound once, at load — restarting never re-binds anything. */
+function bind(id, fn) {
+  document.getElementById(id).addEventListener("click", e => {
+    e.preventDefault();
+    Sound.wake(); Sound.click();
+    fn();
+  });
+}
+bind("btnStart",  () => startGame());
+bind("btnAgain",  () => startGame());
+bind("btnResume", () => setPaused(false));
+bind("btnQuit",   () => { G.mode = "menu"; resetWorld(); hud.classList.remove("on"); show(scStart); });
+bind("btnPause",  () => { if (G.mode === "playing") setPaused(true); else if (G.mode === "paused") setPaused(false); });
+bind("btnReset",  () => startGame());
+btnSound.addEventListener("click", () => applyMute(Sound.toggle()));
+
+/* ============================================================================
+   13. BOOT
+   ============================================================================ */
+addEventListener("resize", resize);
+addEventListener("orientationchange", () => setTimeout(resize, 120));
+
+resize();
+resetWorld();
+G.mode = "menu";
+applyMute(Sound.muted);
+bestHud.textContent = G.best;
+show(scStart);
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
