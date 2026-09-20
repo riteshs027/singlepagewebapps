@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0910">
+<meta name="description" content="Piano Tiles Endless — an endless four-lane piano tiles game that runs in a single HTML file.">
+<title>Piano Tiles Endless</title>
+<style>
+/* ============================================================
+   Design tokens
+   Palette borrows from a real piano: ebony case, ivory keys,
+   brass pedal/hardware, and the crimson felt under the lid.
+   ============================================================ */
+:root{
+  --ebony-0:#07060b;
+  --ebony-1:#0b0910;
+  --ebony-2:#141220;
+  --ivory:#f4efe3;
+  --ivory-dim:#b9b2a4;
+  --brass:#e8b85f;
+  --brass-deep:#a9762a;
+  --felt:#c8324a;
+  --ui-radius:14px;
+  --tap:48px;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+
+html,body{height:100%;margin:0;padding:0;}
+body{
+  position:fixed;inset:0;overflow:hidden;
+  background:
+    radial-gradient(120% 60% at 50% 108%, #2a1f2e 0%, transparent 60%),
+    linear-gradient(180deg,#0a0810 0%, #05040a 100%);
+  color:var(--ivory);
+  font-family:"Avenir Next","Segoe UI",Inter,system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+  font-variant-numeric:tabular-nums;
+  display:flex;align-items:center;justify-content:center;
+  overscroll-behavior:none;
+  touch-action:none;
+  user-select:none;-webkit-user-select:none;
+}
+
+/* ---------- Stage: the whole machine lives in here ---------- */
+#stage{
+  position:relative;
+  width:min(460px,100vw);
+  height:min(900px,100vh);
+  height:min(900px,100dvh);
+  overflow:hidden;
+  background:var(--ebony-1);
+  box-shadow:0 40px 90px rgba(0,0,0,.75), 0 0 0 1px rgba(244,239,227,.07);
+  isolation:isolate;
+}
+@media (min-width:520px) and (min-height:620px){
+  #stage{border-radius:22px;}
+}
+#board{display:block;width:100%;height:100%;touch-action:none;}
+
+/* ---------- Heads-up display ---------- */
+#hud{
+  position:absolute;top:0;left:0;right:0;
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:10px;padding:14px 14px 26px;
+  background:linear-gradient(180deg, rgba(7,6,11,.86) 0%, rgba(7,6,11,.32) 52%, transparent 100%);
+  pointer-events:none;
+  opacity:0;transform:translateY(-8px);
+  transition:opacity .28s ease, transform .28s ease;
+}
+#hud.on{opacity:1;transform:none;}
+#score{
+  display:block;font-size:40px;line-height:.92;font-weight:700;letter-spacing:-.03em;
+  color:var(--ivory);text-shadow:0 2px 18px rgba(232,184,95,.28);
+}
+#hud .caption{display:block;margin-top:5px;font-size:11px;letter-spacing:.09em;color:var(--ivory-dim);}
+#hud .right{display:flex;flex-direction:column;align-items:flex-end;gap:9px;}
+#hud .chips{display:flex;gap:6px;}
+.chip{
+  font-size:11px;letter-spacing:.05em;color:var(--ivory-dim);
+  padding:5px 9px;border-radius:999px;
+  background:rgba(244,239,227,.06);border:1px solid rgba(244,239,227,.09);
+  white-space:nowrap;
+}
+.chip b{color:var(--brass);font-weight:600;}
+#hud .buttons{display:flex;gap:8px;pointer-events:auto;}
+
+/* ---------- Buttons ---------- */
+button{font:inherit;color:inherit;cursor:pointer;border:none;background:none;}
+button:focus-visible{outline:2px solid var(--brass);outline-offset:3px;}
+.icon-btn{
+  width:var(--tap);height:var(--tap);border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;line-height:1;
+  background:rgba(244,239,227,.07);border:1px solid rgba(244,239,227,.12);
+  color:var(--ivory);
+  transition:background .15s ease, transform .12s ease;
+}
+.icon-btn:active{transform:scale(.94);background:rgba(244,239,227,.14);}
+.icon-btn.off{color:#7c7466;}
+
+.primary{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:56px;padding:0 42px;border-radius:999px;
+  font-size:18px;font-weight:600;letter-spacing:.01em;color:#241a06;
+  background:linear-gradient(180deg,#ffd98b 0%, var(--brass) 45%, var(--brass-deep) 100%);
+  box-shadow:0 10px 28px rgba(232,184,95,.3), inset 0 1px 0 rgba(255,255,255,.55);
+  transition:transform .12s ease, box-shadow .2s ease;
+}
+.primary:active{transform:translateY(2px);box-shadow:0 5px 16px rgba(232,184,95,.25), inset 0 1px 0 rgba(255,255,255,.5);}
+.ghost{
+  min-height:48px;padding:0 24px;border-radius:999px;
+  font-size:15px;color:var(--ivory-dim);
+  border:1px solid rgba(244,239,227,.16);background:rgba(244,239,227,.04);
+  transition:color .15s ease,border-color .15s ease;
+}
+.ghost:active{color:var(--ivory);border-color:rgba(244,239,227,.35);}
+
+/* ---------- Screens ---------- */
+.screen{
+  position:absolute;inset:0;z-index:5;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:18px;padding:32px 26px;text-align:center;
+  background:radial-gradient(100% 70% at 50% 42%, rgba(14,12,22,.82) 0%, rgba(7,6,11,.93) 70%);
+  backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+  opacity:0;visibility:hidden;transition:opacity .3s ease, visibility .3s;
+}
+.screen.on{opacity:1;visibility:visible;}
+
+.title{margin:0;font-size:clamp(34px,11vw,46px);font-weight:800;letter-spacing:-.045em;line-height:.94;}
+.title span{display:block;}
+.title .b{
+  background:linear-gradient(180deg,#ffe7b0,var(--brass) 60%,var(--brass-deep));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.keycaps{display:flex;gap:7px;margin:2px 0 4px;}
+.keycap{
+  width:40px;height:52px;border-radius:6px;
+  display:flex;align-items:flex-end;justify-content:center;padding-bottom:7px;
+  font-size:13px;font-weight:600;color:#3a3428;
+  background:linear-gradient(180deg,#fbf7ee,#d9d2c3);
+  box-shadow:0 5px 0 #8d8676, 0 12px 22px rgba(0,0,0,.5);
+}
+.lede{margin:0;max-width:30ch;font-size:15px;line-height:1.6;color:var(--ivory-dim);}
+.lede em{color:var(--ivory);font-style:normal;}
+.record{font-size:13px;color:var(--ivory-dim);}
+.record b{color:var(--brass);font-weight:600;}
+
+.headline{margin:0;font-size:clamp(28px,8vw,36px);font-weight:700;letter-spacing:-.03em;}
+.headline.fail{color:#ff8090;}
+.scorecard{
+  display:grid;grid-template-columns:repeat(3,minmax(72px,1fr));gap:1px;
+  width:min(320px,100%);border-radius:var(--ui-radius);overflow:hidden;
+  background:rgba(244,239,227,.11);
+}
+.scorecard div{background:#121020;padding:15px 8px;}
+.scorecard .n{display:block;font-size:26px;font-weight:700;letter-spacing:-.02em;}
+.scorecard .k{display:block;margin-top:5px;font-size:11px;color:var(--ivory-dim);}
+.scorecard .hi .n{color:var(--brass);}
+.row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+
+@media (max-height:600px){
+  .title{font-size:32px;}
+  .keycaps{display:none;}
+  .screen{gap:13px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms !important;}
+}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <canvas id="board"></canvas>
+
+  <!-- Heads-up display, visible during play -->
+  <div id="hud">
+    <div>
+      <span id="score">0</span>
+      <span class="caption">Tiles struck <b id="tiles">0</b></span>
+    </div>
+    <div class="right">
+      <div class="buttons">
+        <button id="btnMute" class="icon-btn" type="button" aria-label="Mute sound">🔊</button>
+        <button id="btnPause" class="icon-btn" type="button" aria-label="Pause">❚❚</button>
+      </div>
+      <div class="chips">
+        <span class="chip">Level <b id="level">1</b></span>
+        <span class="chip">Best <b id="best">0</b></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Start -->
+  <section id="screenStart" class="screen on">
+    <h1 class="title"><span>Piano Tiles</span><span class="b">Endless</span></h1>
+    <div class="keycaps" aria-hidden="true">
+      <div class="keycap">A</div><div class="keycap">S</div><div class="keycap">D</div><div class="keycap">F</div>
+    </div>
+    <p class="lede">Strike the <em>lowest black tile</em> before it slides off the keyboard. Hit an empty lane and the recital is over.</p>
+    <button id="btnPlay" class="primary" type="button">Play</button>
+    <p class="record">Best score <b id="bestStart">0</b></p>
+  </section>
+
+  <!-- Pause -->
+  <section id="screenPause" class="screen">
+    <h2 class="headline">Paused</h2>
+    <p class="lede">The tiles are holding still. Pick up where you left off.</p>
+    <button id="btnResume" class="primary" type="button">Resume</button>
+    <button id="btnQuit" class="ghost" type="button">End run</button>
+  </section>
+
+  <!-- Game over -->
+  <section id="screenOver" class="screen">
+    <h2 id="overTitle" class="headline fail">Game over</h2>
+    <p id="overReason" class="lede">You struck an empty lane.</p>
+    <div class="scorecard">
+      <div><span class="n" id="finalScore">0</span><span class="k">Score</span></div>
+      <div class="hi"><span class="n" id="finalBest">0</span><span class="k">Best</span></div>
+      <div><span class="n" id="finalTiles">0</span><span class="k">Tiles</span></div>
+    </div>
+    <div class="row">
+      <button id="btnAgain" class="primary" type="button">Play again</button>
+      <button id="btnMenu" class="ghost" type="button">Main menu</button>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* =========================================================
+     1. Configuration
+     ========================================================= */
+  const LANES        = 4;
+  const ROWS_VISIBLE = 4;                       // tiles tall the play area is
+  const KEY_LANE     = { a:0, s:1, d:2, f:3 };  // keyboard controls
+  const LANE_LABEL   = ['A','S','D','F'];
+  const LANE_FREQ    = [261.63, 329.63, 392.00, 523.25]; // C4 · E4 · G4 · C5
+  const BASE_RPS     = 1.15;   // rows per second at score 0
+  const RPS_PER_TILE = 0.021;  // acceleration per successful tile
+  const MAX_RPS      = 6.4;    // speed ceiling
+  const TILES_PER_LV = 12;
+  const START_RAMP   = 0.65;   // seconds eased in at the top of a run
+  const TAP_DEBOUNCE = 55;     // ms, guards against double-fire on a lane
+  const KEY_BEST     = 'pianoTilesEndless.best';
+  const KEY_MUTED    = 'pianoTilesEndless.muted';
+
+  /* =========================================================
+     2. Small helpers
+     ========================================================= */
+  const $ = (id) => document.getElementById(id);
+  const clamp = (v, a, b) => v < a ? a : (v > b ? b : v);
+
+  const store = {
+    get(k, fallback) {
+      try { const v = localStorage.getItem(k); return v === null ? fallback : v; }
+      catch (e) { return fallback; }
+    },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
+  };
+
+  /* =========================================================
+     3. Audio — synthesised piano-ish notes, no files needed
+     ========================================================= */
+  const audio = {
+    ctx: null,
+    master: null,
+    muted: store.get(KEY_MUTED, '0') === '1',
+
+    /** Created lazily so it only ever starts from a user gesture. */
+    unlock() {
+      if (!this.ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        this.ctx = new AC();
+        this.master = this.ctx.createGain();
+        this.master.gain.value = this.muted ? 0 : 0.9;
+        this.master.connect(this.ctx.destination);
+      }
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+    },
+
+    setMuted(m) {
+      this.muted = m;
+      store.set(KEY_MUTED, m ? '1' : '0');
+      if (this.master) this.master.gain.value = m ? 0 : 0.9;
+    },
+
+    /** Additive tone: fundamental + two harmonics through a lowpass. */
+    note(freq, dur, gain, type) {
+      if (!this.ctx || this.muted) return;
+      const t = this.ctx.currentTime;
+      const out = this.ctx.createGain();
+      out.gain.setValueAtTime(0.0001, t);
+      out.gain.exponentialRampToValueAtTime(gain, t + 0.008);
+      out.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(Math.min(8000, freq * 9), t);
+      filter.frequency.exponentialRampToValueAtTime(Math.max(400, freq * 2), t + dur);
+
+      const parts = [[1, 1], [2, 0.34], [3, 0.11]];
+      parts.forEach(function (p, i) {
+        const osc = this.ctx.createOscillator();
+        osc.type = type || (i === 0 ? 'triangle' : 'sine');
+        osc.frequency.value = freq * p[0];
+        const g = this.ctx.createGain();
+        g.gain.value = p[1];
+        osc.connect(g).connect(filter);
+        osc.start(t);
+        osc.stop(t + dur + 0.05);
+      }, this);
+
+      filter.connect(out).connect(this.master);
+    },
+
+    hit(lane, octaveUp) {
+      this.note(LANE_FREQ[lane] * (octaveUp ? 2 : 1), 0.85, 0.28);
+    },
+
+    /** Sour descending pair for a mistake. */
+    fail() {
+      if (!this.ctx || this.muted) return;
+      this.note(207.65, 1.1, 0.22, 'sawtooth');
+      this.note(196.00, 1.3, 0.18, 'sawtooth');
+      const self = this;
+      setTimeout(function () { self.note(138.59, 1.5, 0.2, 'sawtooth'); }, 150);
+    }
+  };
+
+  /* =========================================================
+     4. Game state
+     ========================================================= */
+  const MODE = { START: 'start', PLAY: 'play', PAUSE: 'pause', OVER: 'over' };
+
+  const game = {
+    mode: MODE.START,
+    rows: [],          // index 0 = topmost tile, last = lowest tile
+    rowPool: [],
+    particles: [],
+    partPool: [],
+    score: 0,
+    tiles: 0,
+    level: 1,
+    best: parseInt(store.get(KEY_BEST, '0'), 10) || 0,
+    rps: BASE_RPS,
+    runTime: 0,
+    laneGlow: [0, 0, 0, 0],   // key strike feedback
+    keyHeld: [false, false, false, false],
+    lastTap: [0, 0, 0, 0],
+    shake: 0,
+    errFlash: 0,
+    failLane: -1,
+    gen: { last: -1, repeats: 0 }
+  };
+
+  /* =========================================================
+     5. Canvas + layout
+     ========================================================= */
+  const stage  = $('stage');
+  const canvas = $('board');
+  const ctx    = canvas.getContext('2d', { alpha: false });
+
+  let W = 0, H = 0, keyH = 0, playH = 0, laneW = 0, rowH = 0, dpr = 1;
+  let bgCache = null;
+
+  function layout() {
+    const rect = stage.getBoundingClientRect();
+    const prevRowH = rowH;
+
+    W = Math.max(200, rect.width || window.innerWidth);
+    H = Math.max(320, rect.height || window.innerHeight);
+    dpr = clamp(window.devicePixelRatio || 1, 1, 3);
+
+    canvas.width  = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    keyH  = clamp(H * 0.115, 58, 112);
+    playH = H - keyH;
+    laneW = W / LANES;
+    rowH  = playH / ROWS_VISIBLE;
+    bgCache = null;
+
+    // Keep the board proportionally in place through a rotate/resize.
+    if (prevRowH && prevRowH !== rowH) {
+      const k = rowH / prevRowH;
+      for (let i = 0; i < game.rows.length; i++) game.rows[i].y *= k;
+    }
+  }
+
+  /* =========================================================
+     6. Tile generation — always solvable, never a dead end
+     ========================================================= */
+  function pickLane() {
+    let lane;
+    do {
+      lane = (Math.random() * LANES) | 0;
+    } while (lane === game.gen.last && game.gen.repeats >= 1); // max 2 in a row
+
+    if (lane === game.gen.last) game.gen.repeats++;
+    else { game.gen.last = lane; game.gen.repeats = 0; }
+    return lane;
+  }
+
+  function takeRow(y) {
+    const row = game.rowPool.pop() || { lane: 0, y: 0, hit: false, anim: 0 };
+    row.lane = pickLane();
+    row.y = y;
+    row.hit = false;
+    row.anim = 0;
+    return row;
+  }
+
+  /**
+   * Builds the board. A run starts empty with the first tile just above the
+   * top edge, so every tile falls the full height of the lane. The menu board
+   * is prefilled instead, so the stage is never blank behind the title.
+   */
+  function buildBoard(prefill) {
+    while (game.rows.length) game.rowPool.push(game.rows.pop());
+    game.gen.last = -1;
+    game.gen.repeats = 0;
+    let y = prefill ? playH - rowH : -rowH;
+    const ceiling = prefill ? -rowH * 2 : -rowH * (ROWS_VISIBLE + 1);
+    while (y > ceiling) {
+      game.rows.unshift(takeRow(y));
+      y -= rowH;
+    }
+  }
+
+  /** Lowest tile that has not been struck yet — the one the player owes. */
+  function activeRow() {
+    for (let i = game.rows.length - 1; i >= 0; i--) {
+      if (!game.rows[i].hit) return game.rows[i];
+    }
+    return null;
+  }
+
+  /* =========================================================
+     7. Particles (pooled — nothing accumulates)
+     ========================================================= */
+  function burst(lane, cy, count, warm) {
+    const cx = lane * laneW + laneW / 2;
+    for (let i = 0; i < count; i++) {
+      const p = game.partPool.pop() || {};
+      const a = Math.random() * Math.PI * 2;
+      const sp = 50 + Math.random() * 260;
+      p.x = cx + (Math.random() - 0.5) * laneW * 0.7;
+      p.y = cy + (Math.random() - 0.5) * rowH * 0.35;
+      p.vx = Math.cos(a) * sp;
+      p.vy = Math.sin(a) * sp - 90;
+      p.life = 0;
+      p.max = 0.38 + Math.random() * 0.38;
+      p.size = 1.6 + Math.random() * 3.6;
+      p.warm = warm;
+      game.particles.push(p);
+    }
+    if (game.particles.length > 320) {
+      game.partPool.push.apply(game.partPool, game.particles.splice(0, game.particles.length - 320));
+    }
+  }
+
+  function updateParticles(dt) {
+    for (let i = game.particles.length - 1; i >= 0; i--) {
+      const p = game.particles[i];
+      p.life += dt;
+      if (p.life >= p.max) {
+        game.partPool.push(p);
+        game.particles.splice(i, 1);
+        continue;
+      }
+      p.vy += 900 * dt;
+      p.vx *= 0.97;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+    }
+  }
+
+  /* =========================================================
+     8. Simulation
+     ========================================================= */
+  function currentSpeed() {
+    game.rps = Math.min(MAX_RPS, BASE_RPS + game.tiles * RPS_PER_TILE);
+    const ramp = Math.min(1, game.runTime / START_RAMP);
+    return game.rps * rowH * ramp;
+  }
+
+  function update(dt) {
+    const idle = game.mode === MODE.START;
+    game.runTime += dt;
+
+    if (game.mode === MODE.PLAY || idle) {
+      const v = idle ? rowH * 0.5 : currentSpeed();
+      for (let i = 0; i < game.rows.length; i++) game.rows[i].y += v * dt;
+
+      // Spawn above the viewport as space opens up.
+      while (game.rows.length === 0 || game.rows[0].y > -rowH) {
+        const topY = game.rows.length ? game.rows[0].y : 0;
+        game.rows.unshift(takeRow(topY - rowH));
+      }
+
+      const act = activeRow();
+      if (act) {
+        if (idle) {
+          // The menu board plays itself so the stage is never static.
+          if (act.y > playH - rowH * 0.75) {
+            act.hit = true; act.anim = 0;
+            burst(act.lane, act.y + rowH / 2, 8, true);
+            game.laneGlow[act.lane] = 1;
+          }
+        } else if (act.y >= playH) {
+          gameOver('miss', act.lane);
+        }
+      }
+
+      // Retire tiles once they are fully past the key line.
+      if (game.mode !== MODE.OVER) {
+        while (game.rows.length && game.rows[game.rows.length - 1].y > playH) {
+          game.rowPool.push(game.rows.pop());
+        }
+      }
+    }
+
+    // Animations keep running on the game-over screen.
+    for (let i = 0; i < game.rows.length; i++) {
+      const r = game.rows[i];
+      if (r.hit && r.anim < 1) r.anim = Math.min(1, r.anim + dt * 3.6);
+    }
+    for (let i = 0; i < LANES; i++) {
+      if (game.laneGlow[i] > 0) game.laneGlow[i] = Math.max(0, game.laneGlow[i] - dt * 3.2);
+    }
+    if (game.shake > 0) game.shake = Math.max(0, game.shake - dt * 34);
+    if (game.errFlash > 0) game.errFlash = Math.max(0, game.errFlash - dt * 1.1);
+    updateParticles(dt);
+  }
+
+  /* =========================================================
+     9. Input handling
+     ========================================================= */
+  function strike(lane) {
+    if (game.mode !== MODE.PLAY) return;
+
+    const now = performance.now();
+    if (now - game.lastTap[lane] < TAP_DEBOUNCE) return;  // no double registration
+    game.lastTap[lane] = now;
+
+    game.laneGlow[lane] = 1;
+
+    const act = activeRow();
+    if (!act) return;
+    if (act.y + rowH < 0) return;          // tile has not scrolled in yet: ignore
+
+    if (act.lane !== lane) { gameOver('wrong', lane); return; }
+
+    act.hit = true;
+    act.anim = 0;
+    game.tiles++;
+    game.score += game.level;
+    game.level = Math.floor(game.tiles / TILES_PER_LV) + 1;
+
+    burst(lane, act.y + rowH / 2, 14, true);
+    audio.hit(lane, game.level > 6);
+    syncHud();
+  }
+
+  function laneFromX(clientX) {
+    const rect = canvas.getBoundingClientRect();
+    return clamp(Math.floor((clientX - rect.left) / (rect.width / LANES)), 0, LANES - 1);
+  }
+
+  // Pointer events cover mouse, touch and pen with a single code path.
+  canvas.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    audio.unlock();
+    if (game.mode === MODE.PLAY) strike(laneFromX(e.clientX));
+  }, { passive: false });
+
+  canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+  document.addEventListener('keydown', function (e) {
+    const k = e.key.toLowerCase();
+
+    if (k === 'p' || k === 'escape') {
+      e.preventDefault();
+      if (game.mode === MODE.PLAY) pause();
+      else if (game.mode === MODE.PAUSE) resume();
+      return;
+    }
+    if (k === 'm') { e.preventDefault(); toggleMute(); return; }
+
+    if (k === ' ' || k === 'enter') {
+      if (game.mode === MODE.START) { e.preventDefault(); startRun(); return; }
+      if (game.mode === MODE.OVER)  { e.preventDefault(); startRun(); return; }
+    }
+
+    const lane = KEY_LANE[k];
+    if (lane === undefined) return;
+    e.preventDefault();
+    if (e.repeat || game.keyHeld[lane]) return;   // one strike per physical press
+    game.keyHeld[lane] = true;
+    audio.unlock();
+    strike(lane);
+  });
+
+  document.addEventListener('keyup', function (e) {
+    const lane = KEY_LANE[e.key.toLowerCase()];
+    if (lane !== undefined) game.keyHeld[lane] = false;
+  });
+
+  // Block page-level scrolling / pull-to-refresh on mobile.
+  document.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+  document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+  window.addEventListener('blur', function () { if (game.mode === MODE.PLAY) pause(); });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden && game.mode === MODE.PLAY) pause();
+  });
+
+  /* =========================================================
+     10. Rendering
+     ========================================================= */
+  function roundRect(x, y, w, h, r) {
+    const rad = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    if (ctx.roundRect) { ctx.roundRect(x, y, w, h, rad); return; }
+    ctx.moveTo(x + rad, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rad);
+    ctx.arcTo(x + w, y + h, x, y + h, rad);
+    ctx.arcTo(x, y + h, x, y, rad);
+    ctx.arcTo(x, y, x + w, y, rad);
+    ctx.closePath();
+  }
+
+  function drawBackground() {
+    if (!bgCache) {
+      // The lane bed reads as dimmed ivory keys lit from the keyboard below,
+      // which is what gives the ebony tiles something to stand out against.
+      bgCache = ctx.createLinearGradient(0, 0, 0, playH);
+      bgCache.addColorStop(0, '#211d31');
+      bgCache.addColorStop(0.55, '#272337');
+      bgCache.addColorStop(1, '#3b3450');
+    }
+    ctx.fillStyle = bgCache;
+    ctx.fillRect(0, 0, W, playH);
+
+    // Warm light pooling up from the keyboard, like a stage lamp.
+    const glow = ctx.createRadialGradient(W / 2, playH, 0, W / 2, playH, W * 0.95);
+    glow.addColorStop(0, 'rgba(232,184,95,.13)');
+    glow.addColorStop(1, 'rgba(232,184,95,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, playH);
+
+    // Lane separators + per-lane strike glow.
+    for (let i = 0; i < LANES; i++) {
+      const x = i * laneW;
+      if (i > 0) {
+        ctx.fillStyle = 'rgba(0,0,0,.35)';
+        ctx.fillRect(x - 1, 0, 1.5, playH);
+        ctx.fillStyle = 'rgba(244,239,227,.14)';
+        ctx.fillRect(x + 0.5, 0, 1, playH);
+      }
+      const g = game.laneGlow[i];
+      if (g > 0) {
+        const lg = ctx.createLinearGradient(0, playH * 0.45, 0, playH);
+        lg.addColorStop(0, 'rgba(232,184,95,0)');
+        lg.addColorStop(1, 'rgba(232,184,95,' + (0.22 * g).toFixed(3) + ')');
+        ctx.fillStyle = lg;
+        ctx.fillRect(x, 0, laneW, playH);
+      }
+    }
+  }
+
+  function drawTiles() {
+    const pad = Math.max(2, laneW * 0.035);
+    const gap = Math.max(2, rowH * 0.02);
+    const act = activeRow();
+    const dead = game.mode === MODE.OVER;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, W, playH);
+    ctx.clip();
+
+    for (let i = 0; i < game.rows.length; i++) {
+      const r = game.rows[i];
+      if (r.y > playH || r.y + rowH < 0) continue;
+
+      const x = r.lane * laneW + pad;
+      const w = laneW - pad * 2;
+      const h = rowH - gap;
+      const rad = Math.min(w, h) * 0.09;
+
+      if (!r.hit) {
+        const isAct = r === act;
+        const isBad = dead && isAct;
+
+        const grad = ctx.createLinearGradient(x, r.y, x, r.y + h);
+        if (isBad) {
+          grad.addColorStop(0, '#8e2033');
+          grad.addColorStop(1, '#3a0b14');
+        } else {
+          grad.addColorStop(0, '#14121c');
+          grad.addColorStop(0.42, '#0b0a12');
+          grad.addColorStop(1, '#030306');
+        }
+
+        ctx.save();
+        ctx.shadowColor = isBad ? 'rgba(200,50,74,.6)' : 'rgba(0,0,0,.7)';
+        ctx.shadowBlur = isBad ? 26 : 18;
+        ctx.shadowOffsetY = isBad ? 0 : 5;
+        ctx.fillStyle = grad;
+        roundRect(x, r.y, w, h, rad);
+        ctx.fill();
+        ctx.restore();
+
+        // Bevel: bright top edge, hairline body outline.
+        ctx.strokeStyle = isBad ? 'rgba(255,150,165,.75)' : 'rgba(244,239,227,.26)';
+        ctx.lineWidth = 1.25;
+        roundRect(x + 0.6, r.y + 0.6, w - 1.2, h - 1.2, rad);
+        ctx.stroke();
+
+        ctx.fillStyle = isBad ? 'rgba(255,200,210,.5)' : 'rgba(244,239,227,.3)';
+        ctx.fillRect(x + rad, r.y + 1.5, w - rad * 2, 2);
+
+        // The tile you owe gets a brass underline.
+        if (isAct && !dead && game.mode === MODE.PLAY) {
+          ctx.save();
+          ctx.shadowColor = 'rgba(232,184,95,.9)';
+          ctx.shadowBlur = 12;
+          ctx.fillStyle = '#e8b85f';
+          ctx.fillRect(x + w * 0.18, r.y + h - 5, w * 0.64, 3);
+          ctx.restore();
+        }
+      } else if (r.anim < 1) {
+        // Struck tile: a quick brass bloom that expands and fades.
+        const p = r.anim;
+        const e = 1 - Math.pow(1 - p, 2);
+        const grow = e * rowH * 0.16;
+        const alpha = (1 - p) * 0.85;
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = 'rgba(232,184,95,' + (alpha * 0.5).toFixed(3) + ')';
+        roundRect(x - grow / 2, r.y - grow / 2, w + grow, h + grow, rad + grow / 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.strokeStyle = 'rgba(255,235,190,' + alpha.toFixed(3) + ')';
+        ctx.lineWidth = 2;
+        roundRect(x - grow / 2, r.y - grow / 2, w + grow, h + grow, rad + grow / 2);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawParticles() {
+    if (!game.particles.length) return;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < game.particles.length; i++) {
+      const p = game.particles[i];
+      const t = 1 - p.life / p.max;
+      ctx.globalAlpha = t * t;
+      ctx.fillStyle = p.warm ? (t > 0.55 ? '#fff6df' : '#e8b85f') : '#ff6072';
+      const s = p.size * (0.4 + t * 0.6);
+      ctx.fillRect(p.x - s / 2, p.y - s / 2, s, s);
+    }
+    ctx.restore();
+  }
+
+  function drawKeyboard() {
+    // Felt strip and shadow where the tiles land.
+    const lip = ctx.createLinearGradient(0, playH - 16, 0, playH);
+    lip.addColorStop(0, 'rgba(0,0,0,0)');
+    lip.addColorStop(1, 'rgba(0,0,0,.6)');
+    ctx.fillStyle = lip;
+    ctx.fillRect(0, playH - 16, W, 16);
+
+    ctx.fillStyle = '#6d1526';
+    ctx.fillRect(0, playH, W, 3);
+
+    const top = playH + 3;
+    const h = keyH - 3;
+
+    for (let i = 0; i < LANES; i++) {
+      const x = i * laneW;
+      const g = game.laneGlow[i];
+
+      const grad = ctx.createLinearGradient(0, top, 0, top + h);
+      if (g > 0.02) {
+        grad.addColorStop(0, '#fff3d6');
+        grad.addColorStop(1, '#e8c27a');
+      } else {
+        grad.addColorStop(0, '#f6f2e8');
+        grad.addColorStop(0.82, '#d9d3c4');
+        grad.addColorStop(1, '#b8b2a3');
+      }
+      ctx.fillStyle = grad;
+      ctx.fillRect(x + 1, top, laneW - 2, h);
+
+      if (g > 0.02) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = 'rgba(232,184,95,' + (0.35 * g).toFixed(3) + ')';
+        ctx.fillRect(x + 1, top, laneW - 2, h);
+        ctx.restore();
+      }
+
+      ctx.fillStyle = 'rgba(0,0,0,.22)';
+      ctx.fillRect(x + laneW - 2, top, 2, h);
+
+      ctx.fillStyle = 'rgba(58,52,40,' + (g > 0.02 ? 0.9 : 0.55) + ')';
+      ctx.font = '600 ' + Math.round(clamp(keyH * 0.2, 11, 16)) + 'px ' +
+                 '"Avenir Next", "Segoe UI", system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(LANE_LABEL[i], x + laneW / 2, top + h - Math.max(9, keyH * 0.16));
+    }
+  }
+
+  function drawError() {
+    if (game.errFlash <= 0) return;
+    const a = game.errFlash;
+    if (game.failLane >= 0) {
+      ctx.fillStyle = 'rgba(200,50,74,' + (0.3 * a).toFixed(3) + ')';
+      ctx.fillRect(game.failLane * laneW, 0, laneW, playH);
+    }
+    const v = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.25, W / 2, H / 2, Math.max(W, H) * 0.75);
+    v.addColorStop(0, 'rgba(200,50,74,0)');
+    v.addColorStop(1, 'rgba(200,50,74,' + (0.62 * a).toFixed(3) + ')');
+    ctx.fillStyle = v;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function render() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#07060b';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.save();
+    if (game.shake > 0.2) {
+      ctx.translate((Math.random() - 0.5) * game.shake, (Math.random() - 0.5) * game.shake);
+    }
+    drawBackground();
+    drawTiles();
+    drawParticles();
+    drawKeyboard();
+    drawError();
+    ctx.restore();
+  }
+
+  /* =========================================================
+     11. Main loop
+     ========================================================= */
+  let lastT = 0;
+  function frame(t) {
+    requestAnimationFrame(frame);
+    const dt = lastT ? Math.min(0.05, (t - lastT) / 1000) : 0;
+    lastT = t;
+    if (game.mode !== MODE.PAUSE) update(dt);
+    render();
+  }
+
+  /* =========================================================
+     12. UI plumbing
+     ========================================================= */
+  const ui = {
+    hud: $('hud'),
+    score: $('score'),
+    tiles: $('tiles'),
+    level: $('level'),
+    best: $('best'),
+    bestStart: $('bestStart'),
+    start: $('screenStart'),
+    paused: $('screenPause'),
+    over: $('screenOver'),
+    overReason: $('overReason'),
+    finalScore: $('finalScore'),
+    finalBest: $('finalBest'),
+    finalTiles: $('finalTiles'),
+    mute: $('btnMute')
+  };
+
+  function showScreen(el) {
+    [ui.start, ui.paused, ui.over].forEach(function (s) { s.classList.toggle('on', s === el); });
+  }
+
+  function syncHud() {
+    ui.score.textContent = game.score;
+    ui.tiles.textContent = game.tiles;
+    ui.level.textContent = game.level;
+    ui.best.textContent = Math.max(game.best, game.score);
+    ui.bestStart.textContent = game.best;
+  }
+
+  function toggleMute() {
+    audio.unlock();
+    audio.setMuted(!audio.muted);
+    ui.mute.textContent = audio.muted ? '🔇' : '🔊';
+    ui.mute.classList.toggle('off', audio.muted);
+    ui.mute.setAttribute('aria-label', audio.muted ? 'Unmute sound' : 'Mute sound');
+  }
+
+  /* =========================================================
+     13. State transitions
+     ========================================================= */
+  function startRun() {
+    audio.unlock();
+    game.mode = MODE.PLAY;
+    game.score = 0;
+    game.tiles = 0;
+    game.level = 1;
+    game.runTime = 0;
+    game.shake = 0;
+    game.errFlash = 0;
+    game.failLane = -1;
+    game.laneGlow = [0, 0, 0, 0];
+    while (game.particles.length) game.partPool.push(game.particles.pop());
+    buildBoard(false);
+    syncHud();
+    showScreen(null);
+    ui.hud.classList.add('on');
+  }
+
+  function pause() {
+    if (game.mode !== MODE.PLAY) return;
+    game.mode = MODE.PAUSE;
+    showScreen(ui.paused);
+  }
+
+  function resume() {
+    if (game.mode !== MODE.PAUSE) return;
+    audio.unlock();
+    game.mode = MODE.PLAY;
+    game.runTime = Math.max(game.runTime, START_RAMP); // no re-ramp mid-run
+    showScreen(null);
+  }
+
+  function toMenu() {
+    game.mode = MODE.START;
+    game.runTime = 0;
+    game.shake = 0;
+    game.errFlash = 0;
+    buildBoard(true);
+    ui.hud.classList.remove('on');
+    syncHud();
+    showScreen(ui.start);
+  }
+
+  function gameOver(reason, lane) {
+    if (game.mode !== MODE.PLAY) return;
+    game.mode = MODE.OVER;
+    game.failLane = lane;
+    game.shake = 16;
+    game.errFlash = 1;
+    burst(lane, playH - rowH * 0.5, 26, false);
+    audio.fail();
+
+    if (game.score > game.best) {
+      game.best = game.score;
+      store.set(KEY_BEST, String(game.best));
+    }
+
+    ui.overReason.textContent = reason === 'miss'
+      ? 'A tile slipped past the keyboard.'
+      : 'You struck a lane with no tile in it.';
+    ui.finalScore.textContent = game.score;
+    ui.finalBest.textContent = game.best;
+    ui.finalTiles.textContent = game.tiles;
+    syncHud();
+
+    // Let the error animation read before the panel covers it.
+    setTimeout(function () {
+      if (game.mode === MODE.OVER) showScreen(ui.over);
+    }, 480);
+  }
+
+  /* =========================================================
+     14. Wiring + boot
+     ========================================================= */
+  $('btnPlay').addEventListener('click', startRun);
+  $('btnAgain').addEventListener('click', startRun);
+  $('btnMenu').addEventListener('click', toMenu);
+  $('btnResume').addEventListener('click', resume);
+  $('btnQuit').addEventListener('click', toMenu);
+  $('btnPause').addEventListener('click', pause);
+  ui.mute.addEventListener('click', toggleMute);
+
+  window.addEventListener('resize', layout);
+  window.addEventListener('orientationchange', function () { setTimeout(layout, 120); });
+
+  layout();
+  buildBoard(true);
+  if (audio.muted) {
+    ui.mute.textContent = '🔇';
+    ui.mute.classList.add('off');
+  }
+  syncHud();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
