@@ -1,13 +1,201 @@
-<a href="https://riteshs027.github.io/singlepagewebapps/stickcricket.htm" target="_blank">stick cricket</a> <br>
-<a href="https://riteshs027.github.io/singlepagewebapps/spotkick.htm" target="_blank">Spot kick (Football)</a> <br>
-<a href="https://riteshs027.github.io/singlepagewebapps/skywall.htm" target="_blank">Skywall</a> <br>
-<a href="https://riteshs027.github.io/singlepagewebapps/redbounce.htm" target="_blank">Red bounce</a> <br>
-<a href="https://riteshs027.github.io/singlepagewebapps/skydreams.htm" target="_blank">Sky Dreams</a> <br>
-<a href="https://riteshs027.github.io/singlepagewebapps/airtrafficcontroller.htm" target="_blank">Air Traffic Controller</a> <br>
-<a href="https://riteshs027.github.io/singlepagewebapps/pianotile.htm" target="_blank">Piano Tile</a> <br>
-<a href="https://riteshs027.github.io/singlepagewebapps/ballsort.htm" target="_blank">Ball Sort</a> <br>
-<a href="https://riteshs027.github.io/singlepagewebapps/mindrush.htm" target="_blank">Mind Rush</a> <br>
-<a href="https://riteshs027.github.io/singlepagewebapps/fidgettools.htm" target="_blank">Fidget Tools</a> <br>
-<a href="https://riteshs027.github.io/singlepagewebapps/flagquiz.htm" target="_blank">Flag Quiz</a> <br>
-<a href="https://riteshs027.github.io/singlepagewebapps/chess.htm" target="_blank">Chess</a> <br>
-<a href="https://riteshs027.github.io/singlepagewebapps/map_animator.htm" target="_blank">Map Animator</a> <br>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Games Index | Ritesh's Collection</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        header {
+            text-align: center;
+            padding: 3rem 1rem 2rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .game-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 2rem 1.5rem;
+            text-decoration: none;
+            color: #ffffff;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .game-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .game-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .game-card:hover .game-icon {
+            transform: scale(1.15) rotate(5deg);
+        }
+
+        .game-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            header h1 {
+                font-size: 2rem;
+            }
+            main {
+                grid-template-columns: 1fr;
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🎮 Games Index</h1>
+        <p>Explore, click, and play our awesome collection of web games!</p>
+    </header>
+
+    <main>
+        <a href="https://riteshs027.github.io/games/stickcricket.htm" class="game-card" target="_blank" rel="noopener noreferrer">
+            <div class="game-icon">🏏</div>
+            <div class="game-title">Stick Cricket</div>
+        </a>
+
+        <a href="https://riteshs027.github.io/games/spotkick.htm" class="game-card" target="_blank" rel="noopener noreferrer">
+            <div class="game-icon">⚽</div>
+            <div class="game-title">Spot Kick (Football)</div>
+        </a>
+
+        <a href="https://riteshs027.github.io/games/skywall.htm" class="game-card" target="_blank" rel="noopener noreferrer">
+            <div class="game-icon">🧱</div>
+            <div class="game-title">Skywall</div>
+        </a>
+
+        <a href="https://riteshs027.github.io/games/redbounce.htm" class="game-card" target="_blank" rel="noopener noreferrer">
+            <div class="game-icon">🔴</div>
+            <div class="game-title">Red Bounce</div>
+        </a>
+
+        <a href="https://riteshs027.github.io/games/skydreams.htm" class="game-card" target="_blank" rel="noopener noreferrer">
+            <div class="game-icon">🌌</div>
+            <div class="game-title">Sky Dreams</div>
+        </a>
+
+        <a href="https://riteshs027.github.io/games/airtrafficcontroller.htm" class="game-card" target="_blank" rel="noopener noreferrer">
+            <div class="game-icon">✈️</div>
+            <div class="game-title">Air Traffic Controller</div>
+        </a>
+
+        <a href="https://riteshs027.github.io/games/pianotile.htm" class="game-card" target="_blank" rel="noopener noreferrer">
+            <div class="game-icon">🎹</div>
+            <div class="game-title">Piano Tile</div>
+        </a>
+
+        <a href="https://riteshs027.github.io/games/ballsort.htm" class="game-card" target="_blank" rel="noopener noreferrer">
+            <div class="game-icon">🧪</div>
+            <div class="game-title">Ball Sort</div>
+        </a>
+
+        <a href="https://riteshs027.github.io/games/mindrush.htm" class="game-card" target="_blank" rel="noopener noreferrer">
+            <div class="game-icon">🧠</div>
+            <div class="game-title">Mind Rush</div>
+        </a>
+
+        <a href="https://riteshs027.github.io/games/fidgettools.htm" class="game-card" target="_blank" rel="noopener noreferrer">
+            <div class="game-icon">🌀</div>
+            <div class="game-title">Fidget Tools</div>
+        </a>
+
+        <a href="https://riteshs027.github.io/games/flagquiz.htm" class="game-card" target="_blank" rel="noopener noreferrer">
+            <div class="game-icon">🏳️</div>
+            <div class="game-title">Flag Quiz</div>
+        </a>
+
+        <a href="https://riteshs027.github.io/games/chess.htm" class="game-card" target="_blank" rel="noopener noreferrer">
+            <div class="game-icon">♟️</div>
+            <div class="game-title">Chess</div>
+        </a>
+
+        <a href="https://riteshs027.github.io/games/map_animator.htm" class="game-card" target="_blank" rel="noopener noreferrer">
+            <div class="game-icon">🗺️</div>
+            <div class="game-title">Map Animator</div>
+        </a>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Ritesh's Game Collection. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>
